@@ -1,0 +1,170 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8"><title>screenshots</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#eceef1;font-family:system-ui,-apple-system,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif}
+.cell{position:absolute;overflow:hidden;background:#eceef1;display:grid;place-items:center}
+.cell.dark{background:#0f0f11}
+/* 官方菜单的真实形状 + DSH 主题令牌 */
+.cardwrap{--dsw-alias-bg-layer-1:#fff;--dsw-alias-bg-layer-2:#f5f5f5;--dsw-alias-bg-layer-3:#fff;--dsw-menu-surface-fill:#f8f9fa;--dsw-alias-border-l1:rgb(15 17 21 / 8%);--dsw-alias-border-l2:#0000001a;--dsw-alias-label-primary:#0f1115;--dsw-alias-label-secondary:#65676b;--dsw-alias-label-tertiary:#81858c;--dsw-alias-label-caption:#a2a4a6;--dsw-alias-interactive-bg-hover:#2631480f;--dsw-alias-state-business-primary:#4d93f8;--dsw-alias-state-error-primary:#e5484d;--dsw-alias-menu-icon:#979da6;--dsw-radius-sm:6px;--dsw-radius-md:12px;--dsw-radius-lg:16px;--dsw-elevation-prominent:0 10px 26px rgb(0 0 0 / 16%);--dsw-focus-ring-width:2px;--dsw-focus-ring-color:#4d93f8;color-scheme:light;width:268px}
+.cardwrap.dark{--dsw-menu-surface-fill:#2a2b2f;--dsw-alias-border-l1:rgb(255 255 255 / 6%);--dsw-alias-label-primary:#ebeef2;--dsw-alias-label-secondary:#cfd3d6;--dsw-alias-label-tertiary:#adb2b8;--dsw-alias-interactive-bg-hover:#ffffff14;--dsw-alias-state-business-primary:#7aaaff;--dsw-elevation-prominent:0 10px 26px rgb(0 0 0 / 45%);color-scheme:dark}
+.menu{z-index:1;width:100%;max-height:none;box-shadow:var(--dsw-elevation-prominent);color:var(--dsw-alias-label-primary);border:0;flex-direction:column;padding:4px;display:flex;position:relative;border-radius:var(--dsw-radius-lg);background:var(--dsw-menu-surface-fill)}
+.cell2{box-sizing:border-box;border-radius:var(--dsw-radius-md);width:auto;min-width:100%;height:34px;color:var(--dsw-alias-label-primary);cursor:pointer;text-align:left;background:0 0;border:none;outline:none;align-items:center;gap:6px;padding:0 8px;font-size:13px;line-height:20px;display:flex;font-family:inherit}
+.cellLabel{white-space:nowrap;flex:none}
+.cellValue{text-overflow:ellipsis;white-space:nowrap;text-align:right;min-width:0;color:var(--dsw-alias-label-tertiary);flex:auto;overflow:hidden}
+.cellChevron{width:12px;height:12px;color:var(--dsw-alias-menu-icon);flex:none}
+.trigger{border-radius:var(--dsw-radius-sm);min-width:0;height:28px;color:var(--dsw-alias-label-secondary);cursor:pointer;background:0 0;border:none;outline:none;align-items:center;gap:4px;padding:0 4px 0 8px;font-size:13px;line-height:20px;display:flex;font-family:inherit}
+.triggerLabel{text-overflow:ellipsis;white-space:nowrap;min-width:0;overflow:hidden}
+.triggerEffort{text-overflow:ellipsis;white-space:nowrap;min-width:0;color:var(--dsw-alias-label-caption);flex-shrink:1000;overflow:hidden}
+/* 收起态那一行的外壳（模拟 composer 工具行） */
+.barwrap{--dsw-alias-label-secondary:#65676b;--dsw-alias-label-caption:#a2a4a6;--dsw-alias-interactive-bg-hover:#2631480f;--dsw-alias-border-l2:#0000001a;--dsw-alias-bg-layer-3:#fff;--dsw-radius-lg:16px;color-scheme:light}
+.barwrap.dark{--dsw-alias-label-secondary:#cfd3d6;--dsw-alias-label-caption:#979da6;--dsw-alias-interactive-bg-hover:#ffffff14;--dsw-alias-border-l2:#ffffff1f;--dsw-alias-bg-layer-3:#2a2b2f;color-scheme:dark}
+.bar{width:660px;padding:9px 12px;border:1px solid var(--dsw-alias-border-l2);border-radius:var(--dsw-radius-lg);background:var(--dsw-alias-bg-layer-3);display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:13px;color:var(--dsw-alias-label-caption)}
+.ces-inline{--ces-accent:var(--dsw-alias-state-business-primary,var(--dsw-static-blue-450,#4d93f8));box-sizing:border-box;flex-basis:100%;width:100%;min-width:0}
+.ces-track{position:relative;box-sizing:border-box;height:28px;margin-top:2px;border-radius:999px;background:var(--dsw-alias-border-l1,rgba(15,17,21,.08));cursor:pointer;touch-action:none;user-select:none;-webkit-user-select:none}
+.ces-track:focus-visible{outline:var(--dsw-focus-ring-width,2px) solid var(--dsw-focus-ring-color,var(--ces-accent));outline-offset:2px}
+.ces-fill{position:absolute;top:0;bottom:0;left:0;border-radius:999px;pointer-events:none}
+.ces-tick{position:absolute;top:50%;width:3px;height:3px;margin:-1.5px 0 0 -1.5px;border-radius:50%;background:color-mix(in srgb,var(--dsw-alias-label-primary,#0f1115) 26%,transparent);pointer-events:none}
+.ces-tick[data-on='1']{background:rgba(255,255,255,.5)}
+.ces-knob{position:absolute;top:50%;width:28px;height:28px;margin:-14px 0 0 -14px;border-radius:50%;background:#fff;box-shadow:0 1px 5px rgba(0,0,0,.34),0 0 0 .5px rgba(0,0,0,.06);pointer-events:none}
+.ces-error{margin-top:6px;font-size:11px;line-height:16px;color:var(--dsw-alias-state-error-primary,#e5484d)}
+.ces-card{width:min(268px,100vw - 32px)!important;padding:12px!important;gap:3px}
+.ces-head{order:-2}
+.ces-modelrow{order:-1}
+.ces-head{height:auto!important;padding:0 0 2px!important;justify-content:center!important;cursor:default!important}
+.ces-head:hover{background:0 0!important}
+.ces-head>span:first-child,.ces-head>svg{display:none!important}
+.ces-head>span:nth-child(2){font-size:16px;line-height:22px;font-weight:600;text-align:center;color:var(--dsw-alias-label-primary);flex:1 1 auto}
+.ces-modelrow{height:20px!important;padding:0!important;justify-content:center!important;gap:3px!important}
+.ces-modelrow>span:first-child{display:none!important}
+.ces-modelrow>span:nth-child(2){font-size:12px;line-height:16px;color:var(--dsw-alias-label-secondary);flex:0 1 auto!important;text-align:center}
+.ces-modelrow>svg{color:var(--dsw-alias-label-secondary)!important;width:11px!important;height:11px!important}
+.ces-reset{position:absolute;top:10px;right:10px;width:17px;height:17px;padding:0;border:0;border-radius:50%;background:0 0;color:var(--dsw-alias-label-tertiary,#81858c);cursor:pointer;display:grid;place-items:center;transition:background .12s,color .12s}
+.ces-reset:hover{background:var(--dsw-alias-interactive-bg-hover,#2631480f);color:var(--dsw-alias-label-primary,#0f1115)}
+.ces-reset:focus-visible{outline:var(--dsw-focus-ring-width,2px) solid var(--dsw-focus-ring-color,var(--ces-accent));outline-offset:1px}
+.ces-reset:disabled{opacity:.35;cursor:default;background:0 0}
+.ces-reset svg{width:13px;height:13px;display:block}
+.ces-list{gap:2px;padding:2px 0}
+.ces-option{border-radius:var(--dsw-radius-md,12px)!important;min-height:36px!important;padding:6px 8px!important;gap:7px!important}
+.ces-optioncopy{gap:1px}
+.ces-optionname{font-size:13px;line-height:18px;font-weight:500}
+.ces-option[aria-checked='true']{background:var(--dsw-alias-interactive-bg-hover,#2631480f)}
+:where(.ces-seat){border-radius:999px!important;background:var(--dsw-alias-interactive-bg-hover,#2631480f)!important;padding:0 8px!important;height:28px!important}
+.ces-inline[data-energy='0'] .ces-star,.ces-inline[data-energy='0'] .ces-energy__sweep{animation-play-state:paused}
+.ces-energy{position:absolute;top:0;bottom:0;left:0;border-radius:999px;overflow:hidden;pointer-events:none;opacity:var(--ces-energy,0);transition:opacity .2s ease;background:linear-gradient(90deg,#3b1178 0%,#6d28d9 30%,#9333ea 62%,#c084fc 100%)}
+.ces-stars{position:absolute;top:0;bottom:0;left:0;border-radius:999px;overflow:hidden;pointer-events:none;transition:opacity .2s ease}
+.ces-star{position:absolute;left:0;right:0;height:3px;margin-top:-1.5px;pointer-events:none;animation-name:ces-star-sweep;animation-timing-function:linear;animation-iteration-count:infinite}
+.ces-star__dot{position:absolute;left:100%;top:0;width:3px;height:3px;margin-left:-1.5px;border-radius:50%;background:#fff;box-shadow:0 0 4px rgba(255,255,255,.85);opacity:var(--ces-b,1);transform:scale(var(--ces-b,1))}
+@keyframes ces-star-sweep{0%{transform:translate3d(0,0,0);opacity:0}6%{opacity:1}94%{opacity:1}100%{transform:translate3d(-100%,0,0);opacity:0}}
+.ces-energy__sweep{position:absolute;inset:0;background:linear-gradient(100deg,transparent 18%,rgba(255,255,255,.30) 50%,transparent 82%);transform:translateX(100%);animation:ces-sweep 2.4s linear infinite}
+@keyframes ces-sweep{0%{transform:translateX(100%)}100%{transform:translateX(-100%)}}
+body[data-ds-dark-theme] .ces-star__dot{background:#f5f3ff;box-shadow:0 0 5px rgba(216,180,254,.95)}
+@media (prefers-reduced-motion: reduce){.ces-energy{transition:none}.ces-energy__sweep{display:none}}
+</style></head>
+<body>
+<div id="grid"></div>
+<script>
+const I = {"TH":28,"KR":14,"PARTICLES":[{"y":52,"phase":0.6180339887498949},{"y":84,"phase":0.2360679774997898},{"y":64,"phase":0.8541019662496847},{"y":16,"phase":0.4721359549995796},{"y":92,"phase":0.09016994374947451},{"y":44,"phase":0.7082039324993694},{"y":76,"phase":0.3262379212492643},{"y":56,"phase":0.9442719099991592},{"y":88,"phase":0.5623058987490541},{"y":40,"phase":0.18033988749894903},{"y":36,"phase":0.7983738762488439},{"y":68,"phase":0.41640786499873883},{"y":48,"phase":0.03444185374863373},{"y":80,"phase":0.6524758424985286},{"y":32,"phase":0.27050983124842354},{"y":28,"phase":0.8885438199983184},{"y":60,"phase":0.5065778087482133},{"y":12,"phase":0.12461179749810825},{"y":72,"phase":0.7426457862480031},{"y":24,"phase":0.36067977499789805},{"y":20,"phase":0.978713763747793},{"y":8,"phase":0.5967477524976879}],"STAR_MIN":0.5,"MEAN":1.5,"SPREAD":0.08,"MAXF":2};
+const CLS = {"card":"ces-card","head":"ces-head","modelrow":"ces-modelrow","value":"ces-value","seat":"ces-seat"};
+const h01 = (i, s) => (((i + 1) * s * 2654435761 % 4294967296) >>> 8) % 1000 / 1000;
+const c01 = (x) => (!(x > 0) ? 0 : x > 1 ? 1 : x);
+const energyFor = (p) => c01((c01(p) - 1/3) / (1 - 1/3));
+const speedFor = (p) => Math.min(2, Math.max(0.35, 3 * c01(p) - 1));
+const BLUE=[77,147,248], VIOLET=[147,51,234], DEEP=[76,29,149], TV=[139,92,246];
+const mix=(a,b,t)=>a.map((v,i)=>Math.round(v+(b[i]-v)*c01(t)));
+const fillColorFor=(p)=>{const t=c01(p);return t<=1/3?`rgb(${BLUE})`:t<=2/3?`rgb(${mix(BLUE,VIOLET,(t-1/3)/(1/3))})`:`rgb(${mix(VIOLET,DEEP,(t-2/3)/(1/3))})`;};
+const valueColorFor=(p,off)=>off?"":`rgb(${mix(BLUE,TV,energyFor(p))})`;
+const knob=(p)=>`calc(${I.KR}px + ${Math.round(c01(p)*10000)/10000} * (100% - ${I.KR*2}px))`;
+
+function slider(pct, name, isOff) {
+  const e = energyFor(pct), on = e > 0, sp = speedFor(pct), off = knob(pct);
+  const n = Math.round(e * I.PARTICLES.length);
+  const stars = I.PARTICLES.slice(0, n).map((p, i) => {
+    const b = (I.STAR_MIN + (1 - I.STAR_MIN) * h01(i, 61)).toFixed(3);
+    const spread = 1 - I.SPREAD + 2 * I.SPREAD * h01(i, 29);
+    const dur = I.MEAN * I.MAXF / sp * spread;
+    const delay = -(((p.phase + h01(i, 53) * 0.03) % 1) * dur);
+    return `<span class="ces-star" data-ces-part="star" style="top:${p.y}%;animation-duration:${dur.toFixed(3)}s;animation-delay:${delay.toFixed(3)}s"><span class="ces-star__dot" data-ces-part="particle" style="--ces-b:${b}"></span></span>`;
+  }).join("");
+  const ticks = [0,1,2,3].map(t => `<span class="ces-tick" data-ces-part="tick" data-on="${t <= Math.round(pct*3) ? 1 : 0}" style="left:${knob(t/3)}"></span>`).join("");
+  return `<div class="ces-inline" data-ces-part="root" data-energy="${on?1:0}" style="--ces-energy:${e}">
+    <button type="button" class="ces-reset" data-ces-part="reset" aria-label="恢复默认档位：High" ${name === "High" ? "disabled" : ""}><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13.2 6.6A5.6 5.6 0 1 0 13 10.4"></path><path d="M13.4 2.8v3.9h-3.9"></path></svg></button>
+    <div class="ces-track" data-ces-part="track" role="slider" tabindex="-1" aria-label="推理等级" aria-valuemin="0" aria-valuemax="3" aria-valuenow="${Math.round(pct*3)}" aria-valuetext="${name}">
+      <div class="ces-fill" data-ces-part="fill" style="width:${off};background:linear-gradient(90deg, rgb(${BLUE}), ${fillColorFor(pct)})"></div>
+      <div class="ces-energy" data-ces-part="energy" style="width:${off}"><div class="ces-energy__sweep" data-ces-part="sweep"></div></div>
+      <div class="ces-stars" data-ces-part="stars" style="width:${off};opacity:${(0.6+0.4*e).toFixed(3)}">${stars}</div>
+      ${ticks}
+      <div class="ces-knob" data-ces-part="knob" style="left:${off}"></div>
+    </div>
+  </div>`;
+}
+
+function card(level, dark) {
+  const { pct, name, isOff } = level;
+  const hue = valueColorFor(pct, isOff);
+  const rows = `
+      <button class="cell2 ${CLS.modelrow}" role="menuitem" type="button">
+        <span class="cellLabel">模型</span>
+        <span class="cellValue ${CLS.value}">DeepSeek-V41-Flash</span>
+        <svg class="cellChevron" viewBox="0 0 17 17" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M6.5 4 11 8.5 6.5 13"></path></svg>
+      </button>
+      <button class="cell2 ${CLS.head}" role="menuitem" type="button">
+        <span class="cellLabel">推理等级</span>
+        <span class="cellValue ${CLS.value}" style="color:${hue}">${name}</span>
+        <svg class="cellChevron" viewBox="0 0 17 17" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M6.5 4 11 8.5 6.5 13"></path></svg>
+      </button>`;
+  return `<div class="cardwrap${dark ? " dark" : ""}">
+    <div class="menu ${CLS.card}" role="menu">${rows}${slider(pct, name, isOff)}</div>
+  </div>`;
+}
+
+function seatRow(dark) {
+  const hue = valueColorFor(2/3, false);
+  return `<div class="barwrap${dark ? " dark" : ""}">
+    <div class="bar">
+      <span>发消息或创建任务，/ 调用指令，@ 文件或对话</span>
+      <button class="trigger ${CLS.seat}" aria-haspopup="menu" aria-expanded="true" type="button">
+        <span class="triggerLabel">DeepSeek-V41-Flash</span>
+        <span class="triggerEffort" style="color:${hue}">High</span>
+        <svg width="14" height="14" viewBox="0 0 17 17" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" style="color:var(--dsw-alias-label-caption);flex:none"><path d="M4 6.5 8.5 11 13 6.5"></path></svg>
+      </button>
+    </div>
+  </div>`;
+}
+
+const LEVELS = {
+  max:  { pct: 1,   name: "Max",  isOff: false },
+  high: { pct: 2/3, name: "High", isOff: false },
+  low:  { pct: 1/3, name: "Low",  isOff: false },
+  off:  { pct: 0,   name: "Off",  isOff: true },
+};
+
+/* 布局：第一行是 shot-01（收起态），下面两排是 4 档 × 浅深色 */
+const grid = document.getElementById("grid");
+const cells = [];
+function addCell(id, w, h, x, y, dark, html) {
+  const el = document.createElement("div");
+  el.className = "cell" + (dark ? " dark" : "");
+  el.id = id;
+  el.style.cssText = `left:${x}px;top:${y}px;width:${w}px;height:${h}px`;
+  el.innerHTML = html;
+  grid.appendChild(el);
+  cells.push({ id, x, y, w, h });
+}
+
+const PAD = 16;
+addCell("shot-01", 700, 64, PAD, PAD, false, seatRow(false));
+const order = ["max", "high", "low", "off"];
+let x = PAD, y = PAD + 64 + 20;
+order.forEach((k, i) => {
+  addCell("light-" + k, 300, 172, x + i * (300 + 14), y, false, card(LEVELS[k], false));
+});
+y += 172 + 20;
+order.forEach((k, i) => {
+  addCell("dark-" + k, 300, 172, x + i * (300 + 14), y, true, card(LEVELS[k], true));
+});
+
+window.__cells = cells;
+window.__pick = (id) => { const c = cells.find(v => v.id === id); return c || null; };
+</script>
+</body></html>
