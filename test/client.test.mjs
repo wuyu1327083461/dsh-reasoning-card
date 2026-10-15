@@ -431,6 +431,82 @@ section("4. 关闭菜单 → 官方那一行逐个还原");
   ok(react2.portalHosts.length === 0, "[4] portal 已清空");
 }
 
+section("4b. 点进「推理等级」那一行 → 滑条卡片整个撤掉（不许和等级列表叠在一起");
+{
+  // 用户截图里的 bug：滑条卡片没撤，于是「上面一条滑条 + 下面 Default/Low/Medium/High 四行」
+  // 同时出现 —— 滑条已经能调等级了，官方那个列表就是多此一举。
+  const { menu, bundle } = await setup();
+  ok(menu.menu.classList.contains("ces-card"), "[4b] 前置条件：根面板上卡片确实挂上了");
+  eq(menu.menu.querySelectorAll('[data-ces-part="host"]').length, 1, "[4b] 前置条件：滑条容器在菜单里");
+
+  // 官方 drill 进等级面板：根面板那两行从菜单里消失，换成 role=menuitemradio 的等级行。
+  menu.showList();
+  await settle();
+  bundle.flushObservers();
+  await settle();
+
+  // 滑条与卡片 class 全撤
+  eq(menu.menu.querySelectorAll('[data-ces-part="host"]').length, 0, "[4b] 滑条容器被摘掉");
+  ok(!menu.menu.classList.contains("ces-card"), "[4b] 卡片 class 摘掉（不再有那条滑条）");
+  ok(!menu.effortRow.classList.contains("ces-head"), "[4b] 顶部行 class 摘掉");
+  ok(!menu.modelRow.classList.contains("ces-modelrow"), "[4b] 模型行 class 摘掉");
+  ok(!menu.effortValueEl.classList.contains("ces-value"), "[4b] 档位名 value class 摘掉");
+  ok(!menu.modelValueEl.classList.contains("ces-value"), "[4b] 模型名 value class 摘掉");
+  eq(menu.effortValueEl.style.color, "", "[4b] 档位名的内联颜色还原（不是我们染的那个紫）");
+  ok(bundle.react.portalHosts.length === 0, "[4b] portal 也清空（滑条不再渲染）");
+
+  // 官方列表自身完好：它的 class 一个都没被我们弄丢（卡片式重排仍然在，见 4c），
+  // 官方的 class 都在前面、我们的加在后面 —— 官方点击/键盘/选中态照常可用。
+  eq(menu.modelOptions[0].option.className, "option modelOption selected ces-option", "[4b] 官方列表行的 class 完好（我们的加在后面）");
+  eq(menu.groups.className, "groups scrollable ces-list", "[4b] 官方列表容器的 class 完好");
+}
+
+section("4c. 点进「模型」那一行 → 滑条撤掉，但官方模型列表仍是卡片式行");
+{
+  // 4b 的镜像场景：进的是模型列表，那里本来就有卡片式重排，撤滑条时不能把它一起弄丢。
+  const { menu, bundle } = await setup();
+  ok(menu.modelOptions[0].option.classList.contains("ces-option"), "[4c] 前置条件：根面板时列表行已重排");
+
+  menu.showList();
+  await settle();
+  bundle.flushObservers();
+  await settle();
+
+  eq(menu.menu.querySelectorAll('[data-ces-part="host"]').length, 0, "[4c] 滑条容器被摘掉");
+  ok(!menu.menu.classList.contains("ces-card"), "[4c] 卡片 class 摘掉");
+  // 列表的卡片式重排**必须还在**（这是这个面板唯一该被重排的东西）
+  ok(menu.groups.classList.contains("ces-list"), "[4c] 列表容器仍是 ces-list");
+  for (const entry of menu.modelOptions) {
+    ok(entry.option.classList.contains("ces-option"), `[4c] 列表行仍是 ces-option（${entry.name}）`);
+  }
+  ok(menu.modelOptions[0].copy.classList.contains("ces-optioncopy"), "[4c] 文案容器仍是 ces-optioncopy");
+  ok(menu.modelOptions[0].nameEl.classList.contains("ces-optionname"), "[4c] 名字 span 仍是 ces-optionname");
+}
+
+section("4d. 从子面板返回根面板 → 滑条重新挂上（不是永久失效）");
+{
+  const { menu, bundle } = await setup();
+  menu.showList();
+  await settle();
+  bundle.flushObservers();
+  await settle();
+  ok(!menu.menu.classList.contains("ces-card"), "[4d] 前置条件：在子面板里时确实撤掉了");
+
+  // 官方 drill-back：根面板那两行回到菜单里
+  menu.menu.appendChild(menu.modelRow);
+  menu.menu.appendChild(menu.effortRow);
+  await settle();
+  bundle.flushObservers();
+  await settle();
+
+  ok(menu.menu.classList.contains("ces-card"), "[4d] 卡片 class 重新加上");
+  ok(menu.effortRow.classList.contains("ces-head"), "[4d] 顶部行 class 重新加上");
+  eq(menu.menu.querySelectorAll('[data-ces-part="host"]').length, 1, "[4d] 滑条容器重新注入");
+  ok(bundle.react.portalHosts.length === 1, "[4d] portal 重新建立");
+  // 重新挂上时不能重复加 class（classList 是集合，重复加无害，但记账会重复摘）
+  eq(menu.effortRow.className, "cell ces-head", "[4d] 顶部行的 class 不重复");
+}
+
 section("5. 拖动真的写回官方档位");
 {
   const { menu, react, host } = await setup();
