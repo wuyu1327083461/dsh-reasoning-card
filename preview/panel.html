@@ -44,34 +44,40 @@ body{margin:0;min-height:100vh;display:grid;place-items:start center;gap:18px;pa
 .controls button:hover{background:var(--dsw-alias-interactive-bg-hover)}
 /* ── 以下是**从 lib/client.js 抽取的真 CSS** ── */
 .ces-inline{--ces-accent:var(--dsw-alias-state-business-primary,var(--dsw-static-blue-450,#4d93f8));box-sizing:border-box;flex-basis:100%;width:100%;min-width:0}
-.ces-track{position:relative;box-sizing:border-box;height:28px;margin-top:2px;border-radius:999px;background:var(--dsw-alias-border-l1,rgba(15,17,21,.08));cursor:pointer;touch-action:none;user-select:none;-webkit-user-select:none}
+.ces-track{position:relative;box-sizing:border-box;height:26px;margin-top:12px;border-radius:999px;background:var(--dsw-alias-border-l1,rgba(15,17,21,.08));cursor:pointer;touch-action:none;user-select:none;-webkit-user-select:none}
 .ces-track:focus-visible{outline:var(--dsw-focus-ring-width,2px) solid var(--dsw-focus-ring-color,var(--ces-accent));outline-offset:2px}
 .ces-fill{position:absolute;top:0;bottom:0;left:0;border-radius:999px;pointer-events:none}
 .ces-tick{position:absolute;top:50%;width:3px;height:3px;margin:-1.5px 0 0 -1.5px;border-radius:50%;background:color-mix(in srgb,var(--dsw-alias-label-primary,#0f1115) 26%,transparent);pointer-events:none}
 .ces-tick[data-on='1']{background:rgba(255,255,255,.5)}
-.ces-knob{position:absolute;top:50%;width:28px;height:28px;margin:-14px 0 0 -14px;border-radius:50%;background:#fff;box-shadow:0 1px 5px rgba(0,0,0,.34),0 0 0 .5px rgba(0,0,0,.06);pointer-events:none}
+.ces-knob{position:absolute;top:50%;width:26px;height:26px;margin:-13px 0 0 -13px;border-radius:50%;background:#fff;box-shadow:0 1px 5px rgba(0,0,0,.34),0 0 0 .5px rgba(0,0,0,.06);pointer-events:none}
 .ces-error{margin-top:6px;font-size:11px;line-height:16px;color:var(--dsw-alias-state-error-primary,#e5484d)}
-.ces-card{width:min(268px,100vw - 32px)!important;padding:12px!important;gap:3px}
+.ces-surface{box-sizing:border-box!important;width:min(268px,100vw - 32px)!important;max-width:min(268px,100vw - 32px)!important;padding:12px!important}
+.ces-card{gap:0}
 .ces-head{order:-2}
 .ces-modelrow{order:-1}
-.ces-head{height:auto!important;padding:0 0 2px!important;justify-content:center!important;cursor:default!important}
+.ces-head{height:auto!important;padding:0!important;justify-content:center!important;cursor:pointer!important;position:relative!important}
+.ces-head::after{content:"";position:absolute;left:0;right:0;top:100%;height:2px}
 .ces-head:hover{background:0 0!important}
 .ces-head>span:first-child,.ces-head>svg{display:none!important}
 .ces-head>span:nth-child(2){font-size:16px;line-height:22px;font-weight:600;text-align:center;color:var(--dsw-alias-label-primary);flex:1 1 auto}
 .ces-modelrow{height:20px!important;padding:0!important;justify-content:center!important;gap:3px!important}
 .ces-modelrow>span:first-child{display:none!important}
-.ces-modelrow>span:nth-child(2){font-size:12px;line-height:16px;color:var(--dsw-alias-label-secondary);flex:0 1 auto!important;text-align:center}
+.ces-modelrow>span:nth-child(2){position:relative!important;overflow:visible!important;font-size:12px;line-height:16px;color:var(--dsw-alias-label-secondary);flex:0 1 auto!important;text-align:center}
 .ces-modelrow>svg{color:var(--dsw-alias-label-secondary)!important;width:11px!important;height:11px!important}
+.ces-modelrow>span:nth-child(2)::after{content:"";position:absolute;left:-12px;right:-26px;top:-25px;bottom:-1px;border-radius:5px;background:var(--dsw-alias-interactive-bg-hover,#2631480f);opacity:0;pointer-events:none;z-index:-1}
+.ces-modelrow:hover>span:nth-child(2)::after,.ces-modelrow:focus-visible>span:nth-child(2)::after,.ces-card:has(.ces-head:hover)>.ces-modelrow>span:nth-child(2)::after,.ces-card:has(.ces-head:focus-visible)>.ces-modelrow>span:nth-child(2)::after{opacity:1!important}
+.ces-modelrow:hover,.ces-modelrow:focus-visible,.ces-head:focus-visible{background:0 0!important}
 .ces-reset{position:absolute;top:10px;right:10px;width:17px;height:17px;padding:0;border:0;border-radius:50%;background:0 0;color:var(--dsw-alias-label-tertiary,#81858c);cursor:pointer;display:grid;place-items:center;transition:background .12s,color .12s}
 .ces-reset:hover{background:var(--dsw-alias-interactive-bg-hover,#2631480f);color:var(--dsw-alias-label-primary,#0f1115)}
 .ces-reset:focus-visible{outline:var(--dsw-focus-ring-width,2px) solid var(--dsw-focus-ring-color,var(--ces-accent));outline-offset:1px}
 .ces-reset:disabled{opacity:.35;cursor:default;background:0 0}
 .ces-reset svg{width:13px;height:13px;display:block}
-.ces-list{gap:2px;padding:2px 0}
-.ces-option{border-radius:var(--dsw-radius-md,12px)!important;min-height:36px!important;padding:6px 8px!important;gap:7px!important}
-.ces-optioncopy{gap:1px}
-.ces-optionname{font-size:13px;line-height:18px;font-weight:500}
-.ces-option[aria-checked='true']{background:var(--dsw-alias-interactive-bg-hover,#2631480f)}
+.ces-list{padding:0}
+.ces-option{border-radius:var(--dsw-radius-md,12px)!important;min-height:34px!important;padding:5px 7px!important;gap:6px!important}
+.ces-optioncopy{gap:0}
+.ces-optionname{font-size:13px;line-height:18px;font-weight:400}
+.ces-searchrow{position:absolute!important;top:0!important;left:0!important;width:1px!important;height:1px!important;margin:0!important;padding:0!important;border:0!important;overflow:hidden!important;clip-path:inset(50%)!important;opacity:0!important;pointer-events:none!important}
+.ces-grouphead[data-ces-stuck]{background:var(--dsw-alias-menu-group-header-fill)!important}
 :where(.ces-seat){border-radius:999px!important;background:var(--dsw-alias-interactive-bg-hover,#2631480f)!important;padding:0 8px!important;height:28px!important}
 .ces-inline[data-energy='0'] .ces-star,.ces-inline[data-energy='0'] .ces-energy__sweep{animation-play-state:paused}
 .ces-energy{position:absolute;top:0;bottom:0;left:0;border-radius:999px;overflow:hidden;pointer-events:none;opacity:var(--ces-energy,0);transition:opacity .2s ease;background:linear-gradient(90deg,#3b1178 0%,#6d28d9 30%,#9333ea 62%,#c084fc 100%)}
@@ -113,7 +119,7 @@ body[data-ds-dark-theme] .ces-star__dot{background:#f5f3ff;box-shadow:0 0 5px rg
 
     <div class="col">
       <h4>② 模型列表（子面板，卡片式行）</h4>
-      <div class="mock-menu" role="menu" aria-label="模型">
+      <div class="mock-menu" role="menu" aria-label="模型" id="listMenu">
         <div class="mock-groups" role="menu" id="list">
           <button class="mock-option" role="menuitemradio" aria-checked="true" type="button">
             <span class="mock-optionCopy"><span class="mock-modelName">默认</span></span>
@@ -301,9 +307,9 @@ function valueColorFor(pct, level) {
     }
 
 var ROW_PADDING_BLOCK = "10px";
-var TRACK_HEIGHT = 28;
-var KNOB_SIZE = 28;
-var KNOB_RADIUS = 14;
+var TRACK_HEIGHT = 26;
+var KNOB_SIZE = 26;
+var KNOB_RADIUS = 13;
 var BASE_SPEEDUP = 4;
 var STARFIELD_DURATION_MEAN = 1.5;
 var STARFIELD_DURATION_SPREAD = 0.08;
@@ -318,6 +324,7 @@ var COLOR_VIOLET = [147,51,234];
 var COLOR_DEEP = [76,29,149];
 var COLOR_TEXT_VIOLET = [139,92,246];
 var CLS_CARD = "ces-card";
+var CLS_SURFACE = "ces-surface";
 var CLS_HEAD = "ces-head";
 var CLS_MODELROW = "ces-modelrow";
 var CLS_LIST = "ces-list";
@@ -339,7 +346,8 @@ var index = 2;
 var dragging = false;
 
 /* ── 复刻插件现在的 DOM 桥：**只加 class**（不换节点、不写内联样式）+ append 一个容器 ── */
-document.getElementById("card").classList.add(CLS_CARD);
+document.getElementById("card").classList.add(CLS_SURFACE, CLS_CARD);
+document.getElementById("listMenu").classList.add(CLS_SURFACE);
 document.getElementById("modelRow").classList.add(CLS_MODELROW);
 document.getElementById("effortRow").classList.add(CLS_HEAD);
 document.getElementById("modelRow").querySelector(".mock-cellValue").classList.add(CLS_VALUE);

@@ -171,6 +171,24 @@ class FakeNode {
     for (const listener of [...set]) listener(Object.assign({ type, target: this, preventDefault() {} }, event));
   }
 
+  /**
+   * 模拟真实浏览器的一次点击（`element.click()`）。
+   *
+   * 假 DOM 不模拟捕获/冒泡，所以这里按注册顺序把原生 click 交给 addEventListener 的监听器，
+   * **只有当没有任何监听器把事件拦下**（`stopImmediatePropagation`/`stopPropagation`）时，
+   * 才把 React 属性上的 `onClick` 派发出去 —— 官方两行的 drill 入口就是 onClick，
+   * 这个顺序决定了「行上的捕获守卫能不能拦住官方 drill」。返回是否没被拦下。
+   */
+  click() {
+    let stopped = false;
+    this.dispatch("click", {
+      stopPropagation() { stopped = true; },
+      stopImmediatePropagation() { stopped = true; },
+    });
+    if (!stopped) this.fire("onClick", {});
+    return !stopped;
+  }
+
   contains(node) {
     if (node === this) return true;
     let current = node;
@@ -183,6 +201,18 @@ class FakeNode {
 
   getBoundingClientRect() {
     return this.rect;
+  }
+
+  /**
+   * 官方的 `input[role=searchbox]` 是**真的 input**（`document.activeElement` 就是它），
+   * 插件给它写 `readOnly`；这里让假节点也有这个字段，测试才断言得动。
+   */
+  get readOnly() {
+    return this._readOnly === true;
+  }
+
+  set readOnly(value) {
+    this._readOnly = value === true;
   }
 
   setPointerCapture(pointerId) {
@@ -297,6 +327,27 @@ export function createOfficialMenu(document, options = {}) {
   const effortRow = effort === null ? null : effort.row;
 
   /**
+   * 官方**搜索行**（模型数 > 4 时才有）。真实形状：
+   *   <div class="…searchRow"><span class="…search"><input role="searchbox" …/></span></div>
+   * 插件把它收成 1×1 透明但**保持可聚焦**，所以这里必须是真 input（能收 readOnly）。
+   */
+  let searchRow = null;
+  let searchInput = null;
+  if (options.search !== false) {
+    searchRow = new FakeNode("div");
+    searchRow.className = "hZ8kQ1_searchRow";
+    const searchWrap = new FakeNode("span");
+    searchWrap.className = "hZ8kQ1_search";
+    searchInput = new FakeNode("input");
+    searchInput.setAttribute("type", "text");
+    searchInput.setAttribute("role", "searchbox");
+    searchInput.setAttribute("placeholder", "搜索模型…");
+    searchWrap.appendChild(searchInput);
+    searchRow.appendChild(searchWrap);
+    menu.appendChild(searchRow); // 官方顺序：搜索行在列表之前
+  }
+
+  /**
    * 官方**模型列表**（drill 进 model 面板后的子面板）。形状对齐官方产物：
    *   <div role="menu" id="…-models" class="groups scrollable">
    *     <button role="menuitemradio" aria-checked=… class="option modelOption [selected]">
@@ -309,8 +360,35 @@ export function createOfficialMenu(document, options = {}) {
   groups.setAttribute("role", "menu");
   groups.setAttribute("id", "model-menu-models");
   groups.className = "groups scrollable";
+  /**
+   * 官方每个 provider 一组：`section[data-menu-group]` 里先是 1×1 的 start 探针、
+   * 再是**粘性**标题 `div[data-menu-group-heading]`、然后是这一组的模型行。
+   * 插件的贴顶底色就打在标题上，所以这里必须复刻出来。
+   */
+  const groupHeadings = [];
+  const makeGroup = (label) => {
+    const section = new FakeNode("section");
+    section.setAttribute("role", "group");
+    section.setAttribute("data-menu-group", "");
+    const start = new FakeNode("span");
+    start.setAttribute("data-menu-group-start", "");
+    const heading = new FakeNode("div");
+    heading.setAttribute("data-menu-group-heading", "");
+    heading.className = "MenuGroup_heading";
+    heading.textContent = label;
+    section.appendChild(start);
+    section.appendChild(heading);
+    groups.appendChild(section);
+    groupHeadings.push({ section, heading, label });
+    return section;
+  };
   const modelOptions = [];
-  (options.models ?? ["DeepSeek-V41-Flash", "DeepSeek-V4", "DeepSeek-V3"]).forEach((name, index) => {
+  const names = options.models ?? ["DeepSeek-V41-Flash", "DeepSeek-V4", "DeepSeek-V3"];
+  const perGroup = options.perGroup ?? names.length; // 默认所有模型同属一组
+  const labels = Array.isArray(options.groupLabel) ? options.groupLabel : [options.groupLabel ?? "DeepSeek 账号"];
+  let section = null;
+  names.forEach((name, index) => {
+    if (index % perGroup === 0) section = makeGroup(labels[Math.floor(index / perGroup)] ?? `组 ${Math.floor(index / perGroup) + 1}`);
     const option = new FakeNode("button");
     option.setAttribute("role", "menuitemradio");
     option.setAttribute("aria-checked", index === 0 ? "true" : "false");
@@ -325,7 +403,7 @@ export function createOfficialMenu(document, options = {}) {
     check.className = "check";
     option.appendChild(copy);
     option.appendChild(check);
-    groups.appendChild(option);
+    section.appendChild(option);
     modelOptions.push({ option, copy, nameEl, check, name });
   });
   menu.appendChild(groups);
@@ -340,6 +418,9 @@ export function createOfficialMenu(document, options = {}) {
     effortRow,
     groups,
     modelOptions,
+    searchRow,
+    searchInput,
+    groupHeadings,
     modelLabelEl: model.labelSpan,
     modelValueEl: model.valueSpan,
     effortLabelEl: effort === null ? null : effort.labelSpan,
@@ -802,7 +883,12 @@ export function loadBundle(bundlePath, document, options = {}) {
     innerHeight: 800,
     addEventListener() {},
     removeEventListener() {},
-    dispatchEvent() {},
+    /**
+     * 插件靠"派发 resize"让官方菜单重测位置（官方 place() 挂在 window resize 上）。
+     * 假 window 没有真实布局，这里只把派发**记下来**，测试据此断言"尺寸稳定后确实重测过"。
+     */
+    dispatched: [],
+    dispatchEvent(event) { this.dispatched.push(event && event.type ? event.type : String(event)); },
     Event: function FakeEvent(type) { this.type = type; },
     MutationObserver: MutationObserverStub,
     setInterval: (fn, ms) => setInterval(fn, ms),

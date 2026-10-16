@@ -124,6 +124,10 @@ const constantNames = [
   "CLS_OPTIONNAME",
   "CLS_VALUE",
   "CLS_SEAT",
+  "CLS_SURFACE",
+  "CLS_SEARCHROW",
+  "CLS_GROUPHEAD",
+  "STUCK_ATTR",
   "ROW_PADDING_BLOCK",
   "TRACK_HEIGHT",
   "KNOB_SIZE",
@@ -152,11 +156,12 @@ if (!css.includes(".ces-energy") || !css.includes(".ces-star__dot")) {
 }
 /* 卡片相关守卫：class 名必须是非空字符串；**有样式职责的那几个**还必须真在 CSS 里有规则 ——
    否则预览页会加一堆没人认领的 class，看起来"没生效"却查不出原因。 */
-const MUST_HAVE_RULE = ["CLS_CARD", "CLS_HEAD", "CLS_MODELROW", "CLS_LIST", "CLS_OPTION", "CLS_OPTIONCOPY", "CLS_OPTIONNAME", "CLS_SEAT"];
+const MUST_HAVE_RULE = ["CLS_CARD", "CLS_HEAD", "CLS_MODELROW", "CLS_LIST", "CLS_OPTION", "CLS_OPTIONCOPY", "CLS_OPTIONNAME", "CLS_SEAT", "CLS_SURFACE", "CLS_SEARCHROW", "CLS_GROUPHEAD"];
 /* CLS_VALUE 是个**标记**（断言/调试用），本身不带样式 —— 那两个 value span 的颜色分别是
    JS 写的内联色（卡片顶部档位名）和 `.ces-head/.ces-modelrow > span:nth-child(2)` 的规则。
-   所以它只做非空校验，不过"必须有规则"这一关。 */
-const MARKER_ONLY = ["CLS_VALUE"];
+   STUCK_ATTR 是属性名（`.ces-grouphead[data-ces-stuck]`），只有 CLS_GROUPHEAD 那条规则用得到它。
+   所以这两个只做非空校验，不过"必须有规则"这一关。 */
+const MARKER_ONLY = ["CLS_VALUE", "STUCK_ATTR"];
 for (const name of [...MUST_HAVE_RULE, ...MARKER_ONLY]) {
   const value = constants[name];
   if (typeof value !== "string" || value.length === 0) {
@@ -274,7 +279,7 @@ ${css}
 
     <div class="col">
       <h4>② 模型列表（子面板，卡片式行）</h4>
-      <div class="mock-menu" role="menu" aria-label="模型">
+      <div class="mock-menu" role="menu" aria-label="模型" id="listMenu">
         <div class="mock-groups" role="menu" id="list">
           <button class="mock-option" role="menuitemradio" aria-checked="true" type="button">
             <span class="mock-optionCopy"><span class="mock-modelName">默认</span></span>
@@ -338,6 +343,7 @@ var COLOR_VIOLET = ${JSON.stringify(constants.COLOR_VIOLET)};
 var COLOR_DEEP = ${JSON.stringify(constants.COLOR_DEEP)};
 var COLOR_TEXT_VIOLET = ${JSON.stringify(constants.COLOR_TEXT_VIOLET)};
 var CLS_CARD = ${JSON.stringify(constants.CLS_CARD)};
+var CLS_SURFACE = ${JSON.stringify(constants.CLS_SURFACE)};
 var CLS_HEAD = ${JSON.stringify(constants.CLS_HEAD)};
 var CLS_MODELROW = ${JSON.stringify(constants.CLS_MODELROW)};
 var CLS_LIST = ${JSON.stringify(constants.CLS_LIST)};
@@ -359,7 +365,8 @@ var index = 2;
 var dragging = false;
 
 /* ── 复刻插件现在的 DOM 桥：**只加 class**（不换节点、不写内联样式）+ append 一个容器 ── */
-document.getElementById("card").classList.add(CLS_CARD);
+document.getElementById("card").classList.add(CLS_SURFACE, CLS_CARD);
+document.getElementById("listMenu").classList.add(CLS_SURFACE);
 document.getElementById("modelRow").classList.add(CLS_MODELROW);
 document.getElementById("effortRow").classList.add(CLS_HEAD);
 document.getElementById("modelRow").querySelector(".mock-cellValue").classList.add(CLS_VALUE);

@@ -22,11 +22,12 @@ const bundle = loadBundle(new URL("../lib/client.js", import.meta.url).pathname.
 const I = bundle.plugin.__internals;
 
 /* 每个格子的尺寸：卡片 320×232；收起态那一行 680×64 */
-/* 真卡片是 min(268px, 100vw-32px) 宽（按参考图比例定：卡片宽 = 输入框宽 × 37%）。
+/* 真卡片宽度现在是打在**菜单本体**上的 `.ces-surface{width:min(268px, 100vw-32px)}`
+   （按参考图比例定：卡片宽 = 输入框宽 × 37%，且 box-sizing:border-box）。
    格子要把它**连右上角的重置按钮**一起放下，所以按 268 + 两侧留白算，
    别按内容宽度算（按内容宽度算会把卡片右边裁掉）。
-   `.cardwrap` 里那个写死的 width:420px 是**占位**：产物 CSS 的
-   `.ces-card{width:min(268px,…)!important}` 会把它压回 268px —— 所以格子尺寸是唯一真源。 */
+   `.cardwrap` 里那个写死的 width:268px 是**占位**：产物 CSS 的
+   `.ces-surface{width:min(268px,…)!important}` 会把它压回 268px —— 所以格子尺寸是唯一真源。 */
 const CARD_W = 300, CARD_H = 172, ROW_W = 700, ROW_H = 64;
 
 const page = `<!doctype html>
@@ -60,7 +61,7 @@ const I = ${JSON.stringify({
   TH: I.TRACK_HEIGHT, KR: I.KNOB_RADIUS, PARTICLES: I.PARTICLES, STAR_MIN: I.STARFIELD_MIN,
   MEAN: I.STARFIELD_DURATION_MEAN, SPREAD: I.STARFIELD_DURATION_SPREAD, MAXF: I.MAX_SPEED_FACTOR,
 })};
-const CLS = ${JSON.stringify({ card: I.CLS_CARD, head: I.CLS_HEAD, modelrow: I.CLS_MODELROW, value: I.CLS_VALUE, seat: I.CLS_SEAT })};
+const CLS = ${JSON.stringify({ surface: I.CLS_SURFACE, card: I.CLS_CARD, head: I.CLS_HEAD, modelrow: I.CLS_MODELROW, value: I.CLS_VALUE, seat: I.CLS_SEAT })};
 const h01 = (i, s) => (((i + 1) * s * 2654435761 % 4294967296) >>> 8) % 1000 / 1000;
 const c01 = (x) => (!(x > 0) ? 0 : x > 1 ? 1 : x);
 const energyFor = (p) => c01((c01(p) - 1/3) / (1 - 1/3));
@@ -109,7 +110,7 @@ function card(level, dark) {
         <svg class="cellChevron" viewBox="0 0 17 17" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M6.5 4 11 8.5 6.5 13"></path></svg>
       </button>\`;
   return \`<div class="cardwrap\${dark ? " dark" : ""}">
-    <div class="menu \${CLS.card}" role="menu">\${rows}\${slider(pct, name, isOff)}</div>
+    <div class="menu \${CLS.surface} \${CLS.card}" role="menu">\${rows}\${slider(pct, name, isOff)}</div>
   </div>\`;
 }
 

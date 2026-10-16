@@ -75,11 +75,13 @@ async function setup(options = {}) {
   };
 }
 
-/** 现查轨道节点并给确定几何（假 DOM 不做布局）。 */
+/** 现查轨道节点并给确定几何（假 DOM 不做布局）。
+    只有 width 参与指针映射（`usable = width − 2×KNOB_RADIUS`），高度仅供观感，
+    这里给一个和真实轨道同量级的值即可。 */
 function track(react, left = 0, width = 300) {
   const node = react.find("track");
   if (!node) return null;
-  node.rect = { left, top: 0, right: left + width, bottom: 28, width, height: 28 };
+  node.rect = { left, top: 0, right: left + width, bottom: 26, width, height: 26 };
   return node;
 }
 
@@ -198,8 +200,24 @@ section("2d. 卡片顶部：大号档位名 + 模型名行（视频里的那张�
   ok(css.indexOf("." + internals.CLS_MODELROW + ">span:first-child{display:none") > 0, "[2d] 模型行藏掉官方的「模型」两个字");
   const modelRule = css.slice(css.indexOf("." + internals.CLS_MODELROW + ">span:nth-child(2){"));
   ok(modelRule.indexOf("color:var(--dsw-alias-label-secondary)") > 0, "[2d] 模型名用次要色（视频里是灰的）");
-  // 顶部行不再吃 hover 底色（它不是可点项）
-  ok(css.indexOf("." + internals.CLS_HEAD + ":hover{background:0 0") > 0, "[2d] 顶部行去掉 hover 底色（它不是按钮）");
+  // 顶部行不再吃 hover 底色（官方的可点行 hover 会有底色，这里刻意去掉）
+  ok(css.indexOf("." + internals.CLS_HEAD + ":hover{background:0 0") > 0, "[2d] 顶部行去掉 hover 底色（保持卡片观感）");
+
+  // ── 顶部行现在是**真的可点**：它的 click 被 guardRow 转发到「模型」那一行，
+  //    所以指针要读起来可点（原来是 default，因为那时点了什么也不会发生）。
+  const headRule = css.slice(css.indexOf("." + internals.CLS_HEAD + "{height:auto"));
+  const headBody = headRule.slice(0, headRule.indexOf("}"));
+  ok(headBody.indexOf("cursor:pointer!important") > 0, "[2d] 顶部行指针是 pointer（它现在会转发到模型列表）");
+  ok(headBody.indexOf("position:relative!important") > 0, "[2d] 顶部行是 relative（伪元素靠它定位）");
+  ok(css.indexOf("." + internals.CLS_HEAD + "::after{") > 0, "[2d] 顶部行有一个透明伪元素把点击面积补到卡片底（红框是一整片）");
+  // 上半张的补面积必须**跟着行高自动伸缩**（写死 height 会在行高变化时留缝）
+  const headAfter = css.slice(css.indexOf("." + internals.CLS_HEAD + "::after{"));
+  const headAfterBody = headAfter.slice(0, headAfter.indexOf("}"));
+  ok(headAfterBody.indexOf("top:100%") > 0 && headAfterBody.indexOf("height:2px") > 0,
+    "[2d] 补面积用 top:100%;height:2px（只补上半张底边那点字体空白，不盖住下半张）");
+  // 两行文字的行距：卡片 gap 归零、上半张下内距归零
+  ok(css.indexOf("." + internals.CLS_CARD + "{gap:0}") > 0, "[2d] 卡片两行之间不留 gap（行距收紧）");
+  ok(headBody.indexOf("padding:0!important") > 0, "[2d] 顶部行下内距归零（行距收紧）");
 
   // ── 视觉顺序：大号档位名在上、模型名在下（视频里的排布）。
   //    官方 DOM 顺序是[模型][推理等级]，用 flex order 换位（**不搬节点**）。
@@ -210,6 +228,44 @@ section("2d. 卡片顶部：大号档位名 + 模型名行（视频里的那张�
   eq(menu.menu.children[1], menu.effortRow, "[2d] DOM 里第二个子节点仍是官方的推理等级行");
 }
 
+section("2q. 悬停「档位名 + 模型名」那片区域 → 浮出浅灰圆角胶囊（参考图）");
+{
+  const { internals, menu } = await setup();
+  const css = internals.CSS;
+
+  // 胶囊画在模型名那个 value span 上：span 是内容宽盒子，胶囊于是跟着模型名贴身
+  const modelValueRule = css.slice(css.indexOf("." + internals.CLS_MODELROW + ">span:nth-child(2){"));
+  ok(modelValueRule.indexOf("position:relative!important") > 0, "[2q] 模型名 span 是 relative（胶囊靠它定位）");
+
+  const chipStart = css.indexOf("." + internals.CLS_MODELROW + ">span:nth-child(2)::after{");
+  ok(chipStart > 0, "[2q] 有一个画胶囊的伪元素");
+  const chipRule = css.slice(chipStart);
+  const chipBody = chipRule.slice(0, chipRule.indexOf("}"));
+  ok(chipBody.indexOf("position:absolute") > 0, "[2q] 胶囊是绝对定位的伪元素");
+  // 竖直方向负偏移罩住上一行：head 22（line-height，gap 与下内距都已归零）+ modelrow 20
+  ok(chipBody.indexOf("top:-25px") > 0 && chipBody.indexOf("bottom:-1px") > 0, "[2q] 胶囊往上罩住「档位名」那一行（两行都在胶囊内）");
+  // 水平方向：左 12px，右 26px = 12 + chevron 11 + 行内 gap 3
+  ok(chipBody.indexOf("left:-12px") > 0 && chipBody.indexOf("right:-26px") > 0, "[2q] 胶囊横向只包住文字与雪弗龙（不铺满卡片）");
+  ok(chipBody.indexOf("border-radius:5px") > 0, "[2q] 胶囊是圆角矩形（5px，参考图等比）");
+  ok(chipBody.indexOf("background:var(--dsw-alias-interactive-bg-hover") > 0, "[2q] 胶囊是官方那层浅灰交互底色");
+  ok(chipBody.indexOf("opacity:0") > 0, "[2q] 默认不显示（悬停才浮出）");
+  ok(chipBody.indexOf("pointer-events:none") > 0, "[2q] 胶囊不吃点击（红框整片仍可点进列表）");
+  ok(chipBody.indexOf("z-index:-1") > 0, "[2q] 胶囊在两行文字之下（文字仍可见）");
+
+  // 悬停两行**任意一行**都让胶囊浮出；官方 DOM 里 head 在后面，兄弟选择器只能向后匹配 ⇒ 用 :has()
+  ok(css.indexOf("." + internals.CLS_MODELROW + ":hover>span:nth-child(2)::after") > 0, "[2q] 悬停模型名那一行 → 胶囊浮出");
+  ok(css.indexOf("." + internals.CLS_CARD + ":has(" + "." + internals.CLS_HEAD + ":hover)>" + "." + internals.CLS_MODELROW + ">span:nth-child(2)::after") > 0,
+    "[2q] 悬停档位名那一行 → 同一个胶囊浮出（:has() 跨兄弟匹配）");
+  ok(css.indexOf("opacity:1!important") > 0, "[2q] 悬停态把胶囊显出来");
+
+  // 官方给两行都画了铺满整行的 hover 底色 —— 必须中和，否则和贴身胶囊叠成两层
+  const neutralRule = css.slice(css.indexOf("." + internals.CLS_MODELROW + ":hover,"));
+  ok(neutralRule.indexOf("background:0 0!important") > 0, "[2q] 模型行去掉官方铺满整行的 hover 底色（只留贴身胶囊）");
+
+  // 胶囊是纯 CSS，不许给行加新 class（[4]/[4b] 有 className 全等断言）
+  eq(menu.modelRow.className, "cell ces-modelrow", "[2q] 模型行 class 没被改动（胶囊是纯 CSS）");
+}
+
 section("2h. 卡片尺寸按参考图比例锁住（防止以后又跑偏）");
 {
   const { internals } = await setup();
@@ -217,25 +273,36 @@ section("2h. 卡片尺寸按参考图比例锁住（防止以后又跑偏）");
 
   // 参考图（ChatGPT 桌面版强度弹层）实测比例，本机输入框逻辑宽 ≈ 712px：
   //   卡片宽 ÷ 输入框宽 = 37.0%  → 712 × 37% ≈ 264，取 268
-  //   滑条高 ÷ 卡片宽   = 10.6%  → 268 × 10.6% ≈ 28  ← 与 TRACK_HEIGHT 一致
+  //   滑条高 ÷ 卡片宽   = 10.6%  → 268 × 10.6% ≈ 28
   //   旋钮 ÷ 滑条高     = 100%   ← 与 KNOB_SIZE = TRACK_HEIGHT 一致
-  const cardRule = css.slice(css.indexOf("." + internals.CLS_CARD + "{"));
-  const cardBody = cardRule.slice(0, cardRule.indexOf("}"));
-  const widthMatch = /width:min\((\d+)px/.exec(cardBody);
+  //
+  // 但**滑条高用户后来单独要求「变细 2 个像素」**：28 → 26（9.7%），这里按用户口径锁死，
+  // 不再要求等于参考图的 28。宽度仍按参考图锁 268。
+  // 宽度与内距现在打在**菜单本体**（CLS_SURFACE）上而不是卡片上：官方同一个 portal 容器
+  // 换 pane，只给卡片打宽度会让 drill 进列表时宽度突变（292 → 248）并重锚一次。
+  const surfaceRule = css.slice(css.indexOf("." + internals.CLS_SURFACE + "{"));
+  const surfaceBody = surfaceRule.slice(0, surfaceRule.indexOf("}"));
+  const widthMatch = /width:min\((\d+)px/.exec(surfaceBody);
   ok(widthMatch !== null, "[2h] 卡片宽度写成了固定的 min(Npx, …)");
   const cardWidth = widthMatch === null ? 0 : Number(widthMatch[1]);
   ok(cardWidth >= 250 && cardWidth <= 290, `[2h] 卡片宽 ${cardWidth}px 落在参考图比例换算出的区间（250~290）`);
 
-  // 滑条高 / 卡片宽 ≈ 10.6%（参考图），允许 ±3 个百分点
+  // 官方的菜单本体是 content-box，宽度写 268 会变成 268+12×2=292 并溢出窄视口 —— 必须 border-box
+  ok(surfaceBody.indexOf("box-sizing:border-box") > 0, "[2h] 菜单本体是 border-box（宽度含内距，窄视口不溢出）");
+  ok(surfaceBody.indexOf("max-width:min(") > 0, "[2h] 宽度有上界（长模型名不把卡片撑爆）");
+
+  // 滑条高 / 卡片宽：参考图 10.6%（= 28px），用户后来又要求「变细 2px」→ 26px ≈ 9.7%。
+  // 锁在 26±1，避免以后又被顺手改回去。
   const trackRatio = internals.TRACK_HEIGHT / cardWidth;
   const trackPct = trackRatio * 100;
-  ok(Math.abs(trackPct - 10.6) <= 3, `[2h] 滑条高/卡片宽 = ${trackPct.toFixed(1)}%（参考图 10.6%，容差 3）`);
+  ok(Math.abs(internals.TRACK_HEIGHT - 26) <= 1, `[2h] 滑条高 = ${internals.TRACK_HEIGHT}px（用户要求 28 减 2）`);
+  ok(Math.abs(trackPct - 9.7) <= 1, `[2h] 滑条高/卡片宽 = ${trackPct.toFixed(1)}%（26/268 ≈ 9.7%，容差 1）`);
 
   // 旋钮直径必须等于滑条高（"与滑条同宽"，参考图实测 100%）
   eq(internals.KNOB_SIZE, internals.TRACK_HEIGHT, "[2h] 旋钮直径 = 滑条高（参考图实测 100%）");
 
   // 滑条长宽比：参考图 8.6:1。滑条宽 ≈ 卡片宽 − 2×padding
-  const padMatch = /padding:(\d+)px/.exec(cardBody);
+  const padMatch = /padding:(\d+)px/.exec(surfaceBody);
   const pad = padMatch === null ? 0 : Number(padMatch[1]);
   const trackWidth = cardWidth - pad * 2;
   const aspect = trackWidth / internals.TRACK_HEIGHT;
@@ -244,6 +311,201 @@ section("2h. 卡片尺寸按参考图比例锁住（防止以后又跑偏）");
   // 标题字号要跟着卡片收窄（22px 是 420px 卡片时代的尺寸）
   const headRule = css.slice(css.indexOf("." + internals.CLS_HEAD + ">span:nth-child(2){"));
   ok(headRule.indexOf("font-size:16px") > 0, "[2h] 标题字号 16px（与 268px 卡片配套，不再是 22px）");
+}
+
+section("2i. 菜单本体挂 ces-surface（三个面板永远同宽，drill 时不突变）");
+{
+  const { menu, internals, bundle } = await setup();
+  ok(menu.menu.classList.contains(internals.CLS_SURFACE), "[2i] 菜单本体拿到了 ces-surface");
+  // 宽度与内距必须打在菜单本体上，否则 drill 进列表时官方 .menu 自己那套宽度会让卡片窄一圈
+  const rule = internals.CSS.slice(internals.CSS.indexOf("." + internals.CLS_SURFACE + "{"));
+  const body = rule.slice(0, rule.indexOf("}"));
+  ok(body.indexOf("padding:12px") > 0, "[2i] 菜单本体的内距写在这里（卡片自己不再写）");
+  ok(body.indexOf("width:min(") > 0, "[2i] 宽度写在这里");
+  const cardRule = internals.CSS.slice(internals.CSS.indexOf("." + internals.CLS_CARD + "{"));
+  const cardBody = cardRule.slice(0, cardRule.indexOf("}"));
+  ok(cardBody.indexOf("width:") < 0, "[2i] 卡片规则不再自己写宽度（避免两套宽度打架）");
+
+  // 关闭后必须还原（ces-surface 也在记账里）
+  menu.close();
+  bundle.flushObservers();
+  await settle();
+  const { menu: menu2, bundle: bundle2 } = await setup();
+  menu2.close();
+  bundle2.flushObservers();
+  await settle();
+  ok(!menu2.menu.classList.contains(internals.CLS_SURFACE), "[2i] 关闭后菜单本体的 ces-surface 摘掉");
+}
+
+section("2j. 「搜索模型…」那一行视觉收起，但输入框仍可聚焦（官方键盘路径不能断）");
+{
+  const { menu, internals, bundle } = await setup();
+  const css = internals.CSS;
+
+  ok(menu.searchRow !== null, "[2j] 夹具里有官方的搜索行（前置条件）");
+  ok(menu.searchRow.classList.contains(internals.CLS_SEARCHROW), "[2j] 搜索行拿到了收起 class");
+  eq(menu.searchInput.readOnly, true, "[2j] 输入框被设成 readOnly（不再能打字过滤）");
+
+  // 只加 class、不写内联样式（否则官方重渲染会和我们打架）
+  eq(cssValue(menu.searchRow, "display"), "", "[2j] 不写内联 display（官方 React 重渲染会覆盖）");
+  const rule = css.slice(css.indexOf("." + internals.CLS_SEARCHROW + "{"));
+  const body = rule.slice(0, rule.indexOf("}"));
+  ok(body.indexOf("position:absolute") > 0, "[2j] 绝对定位（不再占一行的高度）");
+  ok(body.indexOf("width:1px") > 0 && body.indexOf("height:1px") > 0, "[2j] 收成 1×1");
+  ok(body.indexOf("opacity:0") > 0, "[2j] 透明");
+  ok(body.indexOf("pointer-events:none") > 0, "[2j] 不可点（不会误触）");
+  // ⚠️ 关键：不能用 display:none —— 官方 drill 进列表后会把焦点给这个输入框，
+  //    方向键/Enter/Tab 全挂在 `event.target instanceof HTMLInputElement` 上。
+  ok(body.indexOf("display:none") < 0, "[2j] 不用 display:none（那样输入框收不到焦点，官方键盘导航会卡死）");
+
+  // 关闭后 readOnly 还原
+  menu.close();
+  bundle.flushObservers();
+  await settle();
+  eq(menu.searchInput.readOnly, false, "[2j] 关闭后输入框的 readOnly 还原");
+  ok(!menu.searchRow.classList.contains(internals.CLS_SEARCHROW), "[2j] 搜索行的收起 class 摘掉");
+}
+
+section("2k. 菜单里的 keydown 守卫：单字符键吃掉，方向键/Enter 放行");
+{
+  const { menu } = await setup();
+  const fire = (key, extra = {}) => {
+    let prevented = false;
+    menu.menu.dispatch("keydown", Object.assign({ key, preventDefault() { prevented = true; } }, extra));
+    return prevented;
+  };
+  ok(fire("g") === true, "[2k] 可打印字符被 preventDefault（否则会变成隐形搜索词）");
+  ok(fire("5") === true, "[2k] 数字键同理");
+  ok(fire("ArrowDown") === false, "[2k] 方向键放行（官方靠它移动高亮）");
+  ok(fire("ArrowUp") === false, "[2k] 方向上放行");
+  ok(fire("Enter") === false, "[2k] Enter 放行（官方靠它选中模型）");
+  ok(fire("Tab") === false, "[2k] Tab 放行");
+  ok(fire("Escape") === false, "[2k] Escape 放行（官方靠它返回/关闭）");
+  ok(fire("Backspace") === false, "[2k] 退格放行");
+  ok(fire("a", { ctrlKey: true }) === false, "[2k] 带修饰键的组合放行（Ctrl+A 等宿主快捷键）");
+}
+
+section("2l. 列表行用回官方样式（圆角矩形 / 34px 行高 / 官方内距）");
+{
+  const { internals } = await setup();
+  const rule = internals.CSS.slice(internals.CSS.indexOf("." + internals.CLS_OPTION + "{"));
+  const body = rule.slice(0, rule.indexOf("}"));
+  // 用户要求「模型列表卡片用回官方的样式」：官方 `._7KE1Ra_option` 是
+  // border-radius:var(--dsw-radius-md) / min-height:34px / padding:5px 7px / gap:6px。
+  // 我们把这四个值**显式写回**（不是改造）—— 同一个元素上我们的 class 与官方哈希
+  // class 优先级相同、两张表先后不确定，显式声明才能确定地拿到官方外观。
+  ok(body.indexOf("border-radius:var(--dsw-radius-md,12px)") > 0, "[2l] 圆角用回官方的 --dsw-radius-md（12px 圆角矩形）");
+  ok(body.indexOf("border-radius:999px") < 0, "[2l] 不再是 999px 胶囊");
+  ok(body.indexOf("min-height:34px") > 0, "[2l] 行高用回官方的 34px");
+  ok(body.indexOf("padding:5px 7px") > 0, "[2l] 内距用回官方的 5px 7px");
+  ok(body.indexOf("gap:6px") > 0, "[2l] 行内 gap 用回官方的 6px");
+  ok(body.indexOf("font-weight") < 0, "[2l] 行上不再压字重（官方是 400）");
+  // 选中态：官方是 `._7KE1Ra_selected{background:0 0}` —— 只靠行尾对勾表示「当前」。
+  // 我们以前铺的那层 `--dsw-alias-interactive-bg-hover` 底色整条规则已撤掉，
+  // 否则「回官方」就只回了一半（悬停底色官方有、选中底色官方没有）。
+  ok(internals.CSS.indexOf("[aria-checked='true']") < 0, "[2l] 选中态不再铺我们自己的底色（交还官方）");
+}
+
+section("2m. 列表容器不再有上内距（官方粘性标题的贴顶判定带只有 1px）");
+{
+  const { internals } = await setup();
+  const rule = internals.CSS.slice(internals.CSS.indexOf("." + internals.CLS_LIST + "{"));
+  const body = rule.slice(0, rule.indexOf("}"));
+  ok(body.indexOf("padding:0") > 0, "[2m] 列表容器 padding 归零");
+  ok(body.indexOf("padding:2px 0") < 0, "[2m] 不再把内容往下推 2px（那 2px 恰好越过官方的 1px 观察带）");
+}
+
+section("2n. 粘性分组标题：加 class + 由插件自己判定贴顶并上底色");
+{
+  const { menu, internals, bundle } = await setup();
+  const css = internals.CSS;
+
+  ok(menu.groupHeadings.length > 0, "[2n] 夹具里有官方的分组标题（前置条件）");
+  const heading = menu.groupHeadings[0].heading;
+  ok(heading.classList.contains(internals.CLS_GROUPHEAD), "[2n] 分组标题拿到了 ces-grouphead");
+
+  // 官方的 observeStickyMenuGroups 靠"列表顶 1px 条"的 IntersectionObserver 判定，
+  // 真机上 section 顶落在 +1~+2px、恰好越过那条带 → data-stuck 从未置位、标题永远透明。
+  // 插件不猜官方什么时候修：按几何自己算（标题顶边贴住列表顶边 + 本组还没滚出去）。
+  const rule = css.slice(css.indexOf("." + internals.CLS_GROUPHEAD + "["));
+  const body = rule.slice(0, rule.indexOf("}"));
+  ok(body.indexOf("background:var(--dsw-alias-menu-group-header-fill)") > 0, "[2n] 贴顶时给不透明底色（否则文字直接叠在滚过的行上）");
+
+  // 几何判定：让标题贴到列表顶（假 DOM 的 rect 是可控的）
+  menu.groups.rect = { left: 0, top: 100, right: 240, bottom: 400, width: 240, height: 300 };
+  const section = menu.groupHeadings[0].section;
+  heading.rect = { left: 0, top: 100, right: 240, bottom: 122, width: 240, height: 22 };
+  section.rect = { left: 0, top: 100, right: 240, bottom: 200, width: 240, height: 100 };
+  menu.groups.dispatch("scroll");
+  ok(heading.getAttribute(internals.STUCK_ATTR) !== null, "[2n] 标题贴住列表顶 → 打上贴顶标记");
+
+  // 本组已经滚出视口（标题跑到列表顶之上很多）→ 不再贴顶
+  heading.rect = { left: 0, top: 40, right: 240, bottom: 62, width: 240, height: 22 };
+  section.rect = { left: 0, top: 40, right: 240, bottom: 90, width: 240, height: 50 };
+  menu.groups.dispatch("scroll");
+  ok(heading.getAttribute(internals.STUCK_ATTR) === null, "[2n] 本组滚出列表顶之后标记摘掉");
+
+  // 关闭后标记与 class 都要还原
+  menu.close();
+  bundle.flushObservers();
+  await settle();
+  ok(!heading.classList.contains(internals.CLS_GROUPHEAD), "[2n] 关闭后标题的 class 摘掉");
+  ok(heading.getAttribute(internals.STUCK_ATTR) === null, "[2n] 关闭后贴顶标记摘掉");
+}
+
+section("2o. 尺寸稳定后派发 resize，让官方菜单重测位置（修上下偏移）");
+{
+  const { menu, bundle } = await setup();
+  // 官方 place() 只在 [open, pane, state, query] 或 window resize 时重算。
+  // 旧实现只在挂上卡片那一刻派发一次 —— 那时尺寸还没稳定，实测根面板底边压住触发器 22px。
+  ok(bundle.window.dispatched.filter((t) => t === "resize").length >= 1, "[2o] 挂上卡片后确实派发过 resize（官方据此重测）");
+  const before = bundle.window.dispatched.length;
+  // 进子面板（列表）时也要重测：列表几何和卡片不一样
+  menu.showList();
+  await settle();
+  bundle.flushObservers();
+  await settle();
+  ok(bundle.window.dispatched.length > before, "[2o] 列表重排后也派发 resize（面板切换要重新定位）");
+}
+
+section("2p. 贴顶标记不能被「有一帧在排队」卡死（rAF 不推进时仍要重画）");
+{
+  const { menu, internals, bundle } = await setup();
+  const heading = menu.groupHeadings[0].heading;
+  const section = menu.groupHeadings[0].section;
+
+  // 让标题贴住列表顶 → 打标记
+  menu.groups.rect = { left: 0, top: 100, right: 240, bottom: 400, width: 240, height: 300 };
+  heading.rect = { left: 0, top: 100, right: 240, bottom: 122, width: 240, height: 22 };
+  section.rect = { left: 0, top: 100, right: 240, bottom: 200, width: 240, height: 100 };
+  menu.groups.dispatch("scroll");
+  ok(heading.getAttribute(internals.STUCK_ATTR) !== null, "[2p] 第一帧画上了贴顶标记");
+
+  // ⚠️ 真机实测：宿主窗口被遮挡/最小化时 rAF 完全不推进。
+  // 若用"有一帧在排队就跳过重画"的写法，第一次滚动之后所有滚动都会被挡掉、
+  // 标记停在旧位置 —— 这里让 rAF 只把回调记下来（永不执行），模拟那种环境。
+  const realRaf = bundle.window.requestAnimationFrame;
+  bundle.window.requestAnimationFrame = () => 1; // 记下句柄，永不回调
+  try {
+    // 本组已滚出列表顶 → 标记必须被摘掉
+    heading.rect = { left: 0, top: 40, right: 240, bottom: 62, width: 240, height: 22 };
+    section.rect = { left: 0, top: 40, right: 240, bottom: 90, width: 240, height: 50 };
+    menu.groups.dispatch("scroll");
+    ok(heading.getAttribute(internals.STUCK_ATTR) !== null, "[2p] 定时兜底之前标记还在（前置条件）");
+
+    // 等兜底定时器（80ms）跑完 —— 它必须把这一帧补上
+    await wait(140);
+    ok(heading.getAttribute(internals.STUCK_ATTR) === null, "[2p] rAF 不推进时，兜底定时器仍把标记摘掉（否则会卡在旧状态）");
+
+    // 兜底跑完后再滚一次：不能因为"上一帧还没清"就把新滚动挡掉
+    heading.rect = { left: 0, top: 100, right: 240, bottom: 122, width: 240, height: 22 };
+    section.rect = { left: 0, top: 100, right: 240, bottom: 200, width: 240, height: 100 };
+    menu.groups.dispatch("scroll");
+    await wait(140);
+    ok(heading.getAttribute(internals.STUCK_ATTR) !== null, "[2p] 兜底之后的滚动仍然照常重画（没被卡死）");
+  } finally {
+    bundle.window.requestAnimationFrame = realRaf;
+  }
 }
 
 section("2g. 重置按钮贴在**卡片**右上角（不靠猜滑条的位置）");
@@ -286,21 +548,35 @@ section("2e. 卡片右上角的重置按钮（插件自绘，官方没有这个�
   const at = await setup({ host: { effort: "high" } });
   eq(at.react.find("reset").getAttribute("disabled"), "", "[2e] 已在默认档 → 按钮置灰");
 
-  // 模型没有默认档元数据 → 不渲染按钮（不给一个按了没反应的按钮）
-  const none = await setup({ host: { noDefaultEffort: true } });
-  eq(none.react.find("reset"), null, "[2e] 没有默认档时不渲染重置按钮");
-  eq(none.react.find("root").getAttribute("data-reset"), "0", "[2e] 容器上标记了没有重置");
+  // 模型没有默认档元数据 → 按钮仍在，但目标是官方语义的「提供商默认」（不带 reasoningEffort）
+  const none = await setup({ host: { effort: "low", noDefaultEffort: true } });
+  ok(none.react.find("reset") !== null, "[2e] 目录没给默认档时按钮仍在（照官方「提供商默认」语义）");
+  eq(none.react.find("root").getAttribute("data-reset"), "1", "[2e] 容器上标记了有重置");
+  eq(none.react.find("root").getAttribute("data-reset-kind"), "provider", "[2e] 目标是「提供商默认」而不是某个档位");
+  ok(none.react.find("reset").getAttribute("aria-label").indexOf(internals.PROVIDER_DEFAULT_NAME) > 0,
+    "[2e] aria-label 里写明了目标是「提供商默认」");
+  none.react.find("reset").fire("onClick", {});
+  await settle();
+  eq(none.host.selects.length, 1, "[2e] 点一下写了一次");
+  eq(none.host.selects[0].reasoningEffort, undefined, "[2e] 写回时不带 reasoningEffort（= 交回提供商默认）");
+  eq(none.host.selects[0].provider, "deepseek", "[2e] 仍然带上 provider");
+  eq(none.host.selects[0].model, "deepseek-v41-flash", "[2e] 仍然带上 model");
 }
 
 section("2f. 重置按钮的 target 必须是**目录里真实存在**的默认档");
 {
   const { host, react } = await setup({ host: { effort: "low" } });
   ok(react.find("reset") !== null, "[2f] 正常目录（默认档是合法档位）→ 按钮在");
+  eq(react.find("root").getAttribute("data-reset-kind"), "level", "[2f] 有默认档时目标是那个档位");
   eq(host.selects.length, 0, "[2f] 渲染本身不写任何东西");
-  // 默认档不在档位表里（目录给了个不存在的 id）→ 不渲染按钮
+  // 默认档不在档位表里（目录给了个不存在的 id）→ 退到「提供商默认」，绝不写那个不认的 id
   const bogus = await setup({ host: { effort: "low", defaultEffort: "ultra-not-a-level" } });
-  eq(bogus.react.find("reset"), null, "[2f] 默认档不在档位表里 → 不渲染（否则点了会写进一个目录不认的值）");
-  eq(bogus.host.selects.length, 0, "[2f] 也不会写入");
+  ok(bogus.react.find("reset") !== null, "[2f] 默认档不在档位表里 → 仍然渲染按钮");
+  eq(bogus.react.find("root").getAttribute("data-reset-kind"), "provider", "[2f] 目标退到「提供商默认」");
+  bogus.react.find("reset").fire("onClick", {});
+  await settle();
+  eq(bogus.host.selects.length, 1, "[2f] 点一下写了一次");
+  eq(bogus.host.selects[0].reasoningEffort, undefined, "[2f] 绝不写那个目录不认的 id");
 }
 
 section("2b. 顶头适配：旋钮与滑条同高，且两端都不越界");
@@ -308,8 +584,8 @@ section("2b. 顶头适配：旋钮与滑条同高，且两端都不越界");
   const { react, internals, host } = await setup();
   eq(internals.KNOB_SIZE, internals.TRACK_HEIGHT, "[2b] 旋钮直径 = 轨道高度（「加大到与滑条同宽」）");
   eq(internals.KNOB_RADIUS, internals.KNOB_SIZE / 2, "[2b] 半径 = 直径的一半");
-  eq(internals.knobOffsetOf(0), "calc(14px + 0 * (100% - 28px))", "[2b] pct=0 时圆心落在左端半径处");
-  eq(internals.knobOffsetOf(1), "calc(14px + 1 * (100% - 28px))", "[2b] pct=1 时圆心落在右端半径处");
+  eq(internals.knobOffsetOf(0), `calc(${internals.KNOB_RADIUS}px + 0 * (100% - ${internals.KNOB_SIZE}px))`, "[2b] pct=0 时圆心落在左端半径处");
+  eq(internals.knobOffsetOf(1), `calc(${internals.KNOB_RADIUS}px + 1 * (100% - ${internals.KNOB_SIZE}px))`, "[2b] pct=1 时圆心落在右端半径处");
   ok(internals.CSS.indexOf(".ces-knob{") > 0, "[2b] 有旋钮规则");
   const knobCss = internals.CSS.slice(internals.CSS.indexOf(".ces-knob{"), internals.CSS.indexOf("}", internals.CSS.indexOf(".ces-knob{")));
   ok(knobCss.indexOf("border-radius:50%") > 0, "[2b] 旋钮是正圆（border-radius:50%）");
@@ -559,6 +835,110 @@ section("6. 拖动不会误触官方那一行的点击（会跳进等级列表�
   track2.handlers.onKeyDown(fakeEvent);
   await settle();
   ok(propagated, "[6] 方向键被滑条 stopPropagation（不会同时移动官方菜单焦点）");
+}
+
+section("6b. 官方「推理等级」那一行的 click 守卫（那张多余的等级卡片不再出现）");
+{
+  // 官方 drill 进等级列表的唯一入口，就是那一行的 onClick。React 17+ 把 onClick
+  // 委托到 portal 容器（document.body）的**冒泡**阶段，所以「原生 click 是否被行上的
+  // 捕获监听拦下」决定了官方那个 onClick 会不会被派发。假 DOM 不模拟冒泡，
+  // 这里手工补上这一段：dispatch 原生 click → 没被拦才 fire 官方属性上的 onClick。
+  const simulateOfficialClick = (row) => {
+    let stopped = false;
+    let drilled = false;
+    row.handlers.onClick = () => { drilled = true; };
+    row.dispatch("click", {
+      stopImmediatePropagation() { stopped = true; },
+      stopPropagation() { stopped = true; },
+    });
+    if (!stopped) row.fire("onClick", {}); // 冒泡到 portal 容器，React 才派发 onClick
+    return { stopped, drilled };
+  };
+
+  const { menu } = await setup();
+
+  // 前置：假菜单的那一行能挂上官方 onClick（真实官方就是给它挂 onClick 去 drill 的）
+  ok(typeof menu.effortRow.handlers === "object", "[6b] 前置条件：那一行能挂官方 onClick（模拟得出来）");
+
+  // 对照组：「模型」那一行**不设防** —— 证明这段模拟真的能测出 drill
+  const modelClicks = menu.modelRow.listeners.get("click");
+  eq(modelClicks === undefined ? 0 : modelClicks.size, 0, "[6b] 「模型」那一行不设防（守卫只管推理等级那一行）");
+  const control = simulateOfficialClick(menu.modelRow);
+  ok(control.drilled, "[6b] 对照组：没设防的行照旧 drill（这段模拟是有效的）");
+
+  // 主角：那一行被原生 click 守卫拦住 → 官方 onClick 根本派发不到 → 不会 drill
+  const clicks = menu.effortRow.listeners.get("click");
+  eq(clicks === undefined ? 0 : clicks.size, 1, "[6b] 那一行装了 1 个原生 click 监听");
+  const guarded = simulateOfficialClick(menu.effortRow);
+  ok(guarded.stopped, "[6b] 原生 click 在那一行上就被拦下（不会冒泡到 portal 容器）");
+  ok(!guarded.drilled, "[6b] 官方 drill 进等级列表的入口被掐掉 → 那张卡片不会再出现");
+
+  // 拦下之后要**转发**给「模型」那一行：卡片上半张（大号档位名）与下半张（模型名）
+  // 是同一个视觉整体，用户画的红框是**一整片**，点哪都该进模型列表。
+  const forward = await setup();
+  let wentToModel = false;
+  let headDrilled = false;
+  forward.menu.modelRow.handlers.onClick = () => { wentToModel = true; };
+  forward.menu.effortRow.handlers.onClick = () => { headDrilled = true; };
+  forward.menu.effortRow.click();
+  ok(!headDrilled, "[6b] 点顶部行不会 drill 进等级列表（官方那一路仍然被掐掉）");
+  ok(wentToModel, "[6b] 顶部行的 click 被转发到「模型」那一行 → 进模型列表");
+  const rearmedSet = forward.menu.effortRow.listeners.get("click");
+  eq(rearmedSet === undefined ? 0 : rearmedSet.size, 1, "[6b] 转发后守卫立刻挂回（转发是「摘→点→挂回」，不是一次性）");
+  wentToModel = false;
+  forward.menu.effortRow.click();
+  ok(wentToModel, "[6b] 再点一次仍然转发（守卫重挂有效，不会因为转发而失效）");
+
+  // 键盘激活走的是同一条路：Enter/Space 由浏览器合成 click，官方 Tab 处理也是 focused.click()
+  const viaKeyboard = simulateOfficialClick(menu.effortRow);
+  ok(viaKeyboard.stopped && !viaKeyboard.drilled, "[6b] 键盘激活（合成 click / Tab 的 focused.click()）同样被拦");
+
+  // 关菜单：官方节点上不留我们的监听（fail-open 的"还原"包含守卫）
+  const closed = await setup();
+  closed.menu.close();
+  closed.bundle.flushObservers();
+  await settle();
+  const afterClose = closed.menu.effortRow.listeners.get("click");
+  eq(afterClose === undefined ? 0 : afterClose.size, 0, "[6b] 关菜单后把守卫监听摘掉（官方节点上不留监听）");
+
+  // 防御路径：万一真进了子面板，守卫随 detach 释放；返回根面板后必须重新挂上
+  const back = await setup();
+  back.menu.showList();
+  await settle();
+  back.bundle.flushObservers();
+  await settle();
+  const inSubPane = back.menu.effortRow.listeners.get("click");
+  eq(inSubPane === undefined ? 0 : inSubPane.size, 0, "[6b] 撤滑条时守卫一起释放");
+  back.menu.menu.appendChild(back.menu.modelRow);
+  back.menu.menu.appendChild(back.menu.effortRow);
+  await settle();
+  back.bundle.flushObservers();
+  await settle();
+  const rearmed = back.menu.effortRow.listeners.get("click");
+  eq(rearmed === undefined ? 0 : rearmed.size, 1, "[6b] 返回根面板后守卫重新挂上（不是永久失效）");
+  ok(simulateOfficialClick(back.menu.effortRow).drilled === false, "[6b] 重挂之后依然拦得住");
+
+  // fail-open：结构不符（不是根面板）时绝不给官方节点装监听
+  const doc = createDocument();
+  const odd = createOfficialMenu(doc);
+  odd.effortRow.setAttribute("role", "menuitemradio");
+  const oddBundle = loadBundle(BUNDLE, doc, {});
+  const oddHost = createFakeHost({});
+  oddBundle.plugin.apply(oddHost.ctx);
+  oddBundle.react.mount(oddHost.registered[0].Component, { sessionId: "session-abcdef" }, odd.composer);
+  await settle();
+  const oddClicks = odd.effortRow.listeners.get("click");
+  eq(oddClicks === undefined ? 0 : oddClicks.size, 0, "[6b] 结构不符（fail-open）时绝不设防");
+  eq(oddBundle.react.portalHosts.length, 0, "[6b] fail-open 时也不注入滑条");
+
+  // 卸载也要摘干净（dispose 路径）
+  const gone = await setup();
+  const goneClicks = gone.menu.effortRow.listeners.get("click");
+  eq(goneClicks === undefined ? 0 : goneClicks.size, 1, "[6b] 前置条件：挂载后守卫在");
+  gone.react.unmount();
+  await settle();
+  const unmounted = gone.menu.effortRow.listeners.get("click");
+  eq(unmounted === undefined ? 0 : unmounted.size, 0, "[6b] 组件卸载后守卫被摘掉");
 }
 
 section("7. 键盘可达 + 去重/限频/在途合并");

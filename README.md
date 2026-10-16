@@ -29,7 +29,8 @@
 它不新增入口：**把官方模型菜单整体重排成一张卡片** ——
 顶部是大号档位名（就是官方那一行的 value 文字，跟着滑条位置变色），
 下面是「模型名 ›」一行，滑条铺满一行，卡片右上角是插件自绘的「恢复默认档位」按钮；
-官方那个模型列表也换成卡片式行。拖到最高档时整条轨道亮起紫色能量层。
+**上半张（档位名）与下半张（模型名）点哪都进模型列表**，官方那个模型列表**行样式保持官方原样**（圆角矩形）。
+拖到最高档时整条轨道亮起紫色能量层。
 
 ```
 点开官方模型菜单后：
@@ -42,7 +43,15 @@
 输入框工具行：**不加任何东西**；收起态那枚席按钮做成胶囊
 ```
 
-点进「模型」那一行，官方的模型列表本身也变成卡片式行（更大的圆角与行距，当前项带底色）。
+点卡片上半张或下半张（也就是上面图里带 `↻` 的整片区域），都会进入官方的模型列表 ——
+列表**行样式用回官方原样**（圆角矩形、34px 行高、官方内距）；顶部的「搜索模型…」输入框已收起，列表顶部贴住卡片内沿。
+
+鼠标悬停在那片区域上时，卡片里会浮出一个**浅灰圆角胶囊**，把大号档位名与模型名两行都罩在里面
+（宽度只包住文字、不铺满卡片，跟着模型名长短伸缩；悬停两行中任意一行都会出现）。
+两行文字之间的行距是**收紧过**的：卡片不设 `gap`、上半张不留下内距，只留字体自身的行高 ——
+实测两行文字的空隙从 7px 收到 2px，整张卡片高 104px（收紧前行高撑到 96px 的下一档）。
+胶囊是**5px 圆角**的圆角矩形（参考图量得 8 源像素 × 268/446 ≈ 4.8），
+底边与滑轨之间留 **13px** 间距（参考图等比换算 13.2px），不与滑条相贴。
 
 拖到最高档：轨道变为**紫色星云**（流向渐变 + 扫光 + 22 颗错峰星尘粒子）。
 
@@ -146,21 +155,110 @@ npm run pack      # = powershell -NoProfile -ExecutionPolicy Bypass -File pack-d
 **只重排、不换节点**：官方那两行与官方列表行，DOM **一个节点都不新建/不删除/不搬动**，
 只给它们加一个自己的 class（`ces-head` / `ces-modelrow` / `ces-option` …）改外观；
 卡片里的**视觉顺序**（大号档位名在上、模型名在下）用 flex `order` 换位，DOM 顺序仍是官方的 `[模型][推理等级]`。
-关菜单或卸载时把 class 逐个摘掉即可完全还原 —— 因此官方的点击进子面板、键盘、Esc、焦点、
+关菜单或卸载时把 class 逐个摘掉即可完全还原 —— 因此官方的键盘、Esc、焦点、
 以及 portal 定位逻辑**全部原封不动**。
+
+**行为改动一共四处**，都只碰官方节点上的**监听器与 DOM 属性**，不新建/不搬动官方节点：
+
+1. 在「推理等级」那一行上装一个**捕获阶段**的原生 `click` 监听（`guardRow`），
+   `stopImmediatePropagation()` 掉它 —— 官方 drill 进等级列表的唯一入口就是这个 `onClick`，
+   拦掉之后那张 Default/Low/High/Xhigh 卡片永远不会出现，滑条成为唯一的档位控件。
+   必须挂在**那一行自己**身上（React 17+ 的 `onClick` 委托在 portal 容器的冒泡阶段，
+   挂祖先会排到 React 之后）。只拦 `click`：`pointerdown` / `pointerup` / `keydown` /
+   `mousedown` 一概不碰，官方根面板的 ArrowDown/Up 焦点移动、Tab 顺序、Esc 关菜单全部照常。
+   拦下之后**转发**给「模型」那一行（`guardRow(head, modelRow)`）：卡片上半张是大号档位名、
+   下半张是模型名，本来就是同一个视觉整体，点哪都该进**模型列表**。转发是「先摘守卫 →
+   `target.click()` → 立刻挂回」，摘掉是为了不让自己转出去的 click 又落回自己（无限递归）。
+   那一行因此是 `cursor:pointer`，并用一个透明 `::after`（`top:100%;height:2px`）把上半张底边
+   那 2px 字体空白补上 —— 用户框选的是一整片区域，而那 2px 本来不属于任何一行、
+   点了什么都不会发生。（只补 2px：下半张本来就整行可点，补多了会反过来盖住下半张的文字。）
+2. 在菜单本体上装一个**捕获阶段**的 `keydown` 守卫（`guardKeys`），只拦可打印字符
+   （`key.length === 1` 且无 Ctrl/Meta/Alt）—— 配合搜索框的 `readOnly`，
+   让"搜索输入框不再能吃字"，同时不碰任何导航键。详见下面「菜单尺寸与列表」一节。
+3. 给列表容器装一个 `scroll` 监听（`watchGroupHeads`）与菜单本体装一个 `ResizeObserver`
+   （`settleMenu`）—— 前者给贴顶分组标题补底色，后者在尺寸变化后让官方 `place()` 重测定位。
+4. 放宽 ↻ 的可用条件（`resetTargetOf`）：旧逻辑要求目录必须给出 `reasoning.defaultEffort`，
+   否则**不渲染按钮**；现在目录没给（或给的 id 不在档位表里）时也渲染，点了走**提供商默认**
+   —— 官方模型列表在同样情况下就是这么补一项的（`effort.providerDefault`，提交不带 `reasoningEffort`）。
+   本机 trae 那批模型目录里只有 `efforts`、没有 `defaultEffort`，旧逻辑下卡片右上角永远空着，
+   与参考图不符。容器上因此多一个 `data-reset-kind="level|provider|none"` 标记。
+
+所有监听随 `detach()` / `dispose()` 摘掉，官方节点上不留任何我们的监听。
 
 **fail-open**：任何一步认不出（没有 `aria-controls`、不是根面板、不是自己的 composer、
 目录里没有档位、会话作用域没就绪）就把 class 与容器全撤掉 —— 官方菜单保持原样，绝不会因为本插件点不开。
 
-官方菜单是"测量后固定定位"的，插件改完卡片尺寸后会派发一次 `resize`，
-官方自己的 `place()` 会重新读 `offsetHeight` 并重新夹取位置。
+### 菜单尺寸与列表（四项改造）
+
+官方菜单本体（`_7KE1Ra_menu`，root / model / effort 三个面板**复用同一个 portal 容器**）
+拿到 `ces-surface`：`box-sizing:border-box` + `width:min(268px, 100vw − 32px)` + `padding:12px`。
+宽度与内距**必须打在这个容器上而不是卡片上** —— 官方菜单默认是 `content-box`，
+旧写法把 `width:268px` 写在卡片上，实际外框 268 + 12×2 = **292px**；而点进「模型」后
+卡片 class 被摘掉，回落官方的 `width:max-content`（240px 内容宽），于是面板**从 292 突变到 248**，
+官方 `place()` 又是右对齐定位（`x = rect.right − lw`）→ 整块重锚，视觉上就是"跳一下"。
+统一到菜单本体后 root / model / effort 三个面板**永远同宽**，窄视口（320px）也不再溢出
+（旧写法实测 `left = −4`，卡片半个身子在窗口外）。
+
+- **搜索框收起**：官方是否渲染搜索行只由 `choices.length > 4` 决定（React 里的常量判定，
+  插件改不了），所以只能从 CSS 下手。做法是给搜索行 `ces-searchrow`：
+  `position:absolute` + `1px×1px` + `clip-path:inset(50%)` + `opacity:0` + `pointer-events:none` ——
+  **占 0 布局空间但仍可聚焦**。为什么不能直接 `display:none`：官方所有键盘分支都以
+  `showSearch` 为条件、且都指向那颗 input（drill 后 `searchRef.focus()`、ArrowDown/Up 在 input 里
+  移高亮、Enter/Tab 在 input 里选中、Tab-from-trigger 也是聚焦它），`display:none` 会让这些聚焦全部
+  落空、键盘导航卡死。保留可聚焦 = 官方键盘行为**零改动**。另外给它加 `readOnly = true`
+  （随 `scan()` 重写，因为 React 的 `readOnly` 是受控 prop 会覆盖），再在菜单上挂一个捕获阶段的
+  `keydown` 守卫拦掉可打印字符 —— 于是"能键盘导航、但不能打字过滤"，正是需求要的。
+- **列表行用回官方样式**：`.ces-option{border-radius:var(--dsw-radius-md,12px);min-height:34px;padding:5px 7px;gap:6px}`
+  —— 这四个值本来就是官方 `._7KE1Ra_option` 的，这里**显式写回**（不是改造）：同一个元素上我们的
+  class 与官方哈希 class 优先级相同、两张样式表先后不确定，显式声明才能确定地拿到官方外观。
+  选中态也交还官方（官方 `._7KE1Ra_selected{background:0 0}`，只靠行尾对勾表示「当前」），
+  插件以前铺的那层 `--dsw-alias-interactive-bg-hover` 底色整条规则已撤掉。纯 CSS，不给行加新 class ——
+  测试里有 `className` 全等断言。
+- **悬停胶囊**：悬停「档位名 + 模型名」那片区域时浮出一个浅灰圆角矩形（参考图效果）。
+  它必须**纯 CSS**（同上：不能加节点、不能加 class），所以画成
+  `.ces-modelrow>span:nth-child(2)::after` —— 挂在**模型名那个 value span** 上。
+  选它的原因：span 是 `flex:0 1 auto` 的**内容宽**盒子（实测 149px，卡片内容区 244px），
+  于是胶囊跟着模型名贴身伸缩、在卡片里居中；绝对定位 + 负偏移
+  （`top:-25px` / `bottom:-1px` / `left:-12px` / `right:-26px`）把上一行「档位名」与右侧
+  雪弗龙都罩进来（实测胶囊高 42px、水平居中于卡片、圆角 5px —— 参考图 8 源像素 × 268/446）。
+  `bottom:-1px` 是关键：`-4px` 会让胶囊往下多长 3px，把滑条上方那 12px 间距吃掉一大半
+  （实测只剩 10px）—— 收到 `-1px` 后间距 13px，与参考图等比一致。触发用 `:hover` + `:has(.ces-head:hover)`（官方 DOM 顺序是
+  `[模型行][推理等级行]`、视觉上档位名在上靠 `order:-2`，兄弟选择器只能向后匹配，
+  所以跨行必须 `:has()`）。`z-index:-1` 让它落在菜单材质层之上、文字之下；
+  `pointer-events:none` 保证不吃点击。同时要**中和官方铺满整行的 hover 底色**
+  （`.ces-modelrow:hover{background:0 0}`）—— 否则会跟贴身胶囊叠成两层。
+  ⚠️ 还有一处必须覆盖：官方 `.cellValue` 带 `overflow:hidden`（给超长模型名做省略号用的），
+  会把挂在 span 上的伪元素连负偏移一起裁掉（实测只剩 149×16），
+  所以 `.ces-modelrow>span:nth-child(2)` 要写 `overflow:visible` —— 卡片内容区 244px、
+  实测最长的模型名 202px，离省略号还远，去掉裁剪不影响观感。
+- **贴顶分组标题**：官方列表有粘性分组头（`[data-menu-group-heading]`），但官方的
+  `observeStickyMenuGroups` 靠"列表顶 1px 条"判定 `data-stuck`，插件原来的
+  `.ces-list{padding:2px 0}` 把 section 顶推到 2px，**恰好越过那条判定带** → 贴顶标题永远没有底色、
+  文字直接压在滚过的行上（就是"拥挤/压字"）。现在 `.ces-list{padding:0}` 归零，并且插件自己给
+  贴顶标题补一个不依赖官方观察器的底色：`paintGroupHeads(list)` 在列表 `scroll` 时算
+  `heading.top <= listTop + 1 && section.bottom > listTop + 1`，命中就写 `data-ces-stuck`，
+  CSS 里 `.ces-grouphead[data-ces-stuck]{background:var(--dsw-alias-menu-group-header-fill)}`。
+- **重新定位**：官方 `place()` 只在 `[open, pane, state, query]` 变化或 window `resize` 时重算。
+  插件原来在 `scan()` 里派发**一次** `resize`，但那一刻滑条/列表尺寸还没落定 ——
+  实测根面板底边压住触发器 **22px**（官方基准是 `trigger.top − 8`，即 gap `+8`）。
+  改成 `settleMenu(menu)`：用 `ResizeObserver` 盯住菜单本体，**尺寸一变就重测**（有 RO 用 RO，
+  没有则退化为挂载时派发一次）。实测 gap 从 `−22` 修正到 `+8`，且只触发一次、不抖动。
 
 ### 「恢复默认档位」按钮
 
-卡片右上角那个 ↻ 是插件自绘的（官方没有这个按钮）。它写回的是**模型自己的默认档**
-（官方 `reasoning.defaultEffort`），并且会先校验这个 id **确实在当前档位表里** ——
-目录没给默认档、或给的 id 不在档位表里时**不渲染按钮**，不给一个点了没反应的按钮。
-已经就在默认档上时按钮置灰。
+卡片右上角那个 ↻ 是插件自绘的（官方没有这个按钮），目标分两种情况，都照**官方模型列表自己的语义**：
+
+- 目录给了 `reasoning.defaultEffort`、且这个 id **确实在当前档位表里** → 写回那个档位 id。
+  官方在档位列表里就是把它当成普通档位列出来的（带默认档自己的名字）。
+- 目录**没给**默认档，或给的 id 不在档位表里 → 清空显式档位、交回**提供商默认**。
+  官方在同样情况下会往档位列表里**补一项**「提供商默认」（文案键 `effort.providerDefault`），
+  提交的是 `select({provider, model})` —— **不带** `reasoningEffort`；插件照抄同一套
+  （`flush()` 里对 `PROVIDER_DEFAULT_ID` 走的就是这个分支）。没有这条回退，
+  本机 trae 那批模型（目录里只有 `efforts`、没有 `defaultEffort`）卡片右上角就永远空着。
+
+模型**压根没有推理能力**（目录里没有 `reasoning` 元数据，也就没有档位表）时才不渲染按钮 ——
+那时没有"默认档"可言。已经在目标上（同档位 / 本来就没显式设置过档位）时按钮置灰。
+容器上带 `data-reset="1|0"` 与 `data-reset-kind="level|provider|none"` 两个标记。
 
 ## 数据路径（只用官方公开面）
 
@@ -231,7 +329,7 @@ npm run pack      # = powershell -NoProfile -ExecutionPolicy Bypass -File pack-d
     但内联更少一层不确定性，"减少动态效果"的放缓也顺势改到 JS 里算（`REDUCED_MOTION_SLOWDOWN`）。
   - 伪随机是**确定性**的（`starHash01`，不用 `Math.random`）：重渲染不跳变，且可离线断言。
 
-**"聚集"的量化对照**（模拟真产物参数，轨道 300×28px，两星中心距离 <6px 记为粘住）：
+**"聚集"的量化对照**（模拟真产物参数，轨道 300×26px，两星中心距离 <6px 记为粘住）：
 
 | t=0.2s（刚进档）   | t=0.4s        | t=1s      | t=2s      | t=3s          |
 | ------------- | ------------- | --------- | --------- | ------------- |
@@ -272,11 +370,11 @@ npm run pack      # = powershell -NoProfile -ExecutionPolicy Bypass -File pack-d
 
 ## 旋钮几何（顶头适配）
 
-旋钮是**正圆，直径 = 轨道高度**（`TRACK_HEIGHT = KNOB_SIZE = 28px`），  
-圆心只在 `[14px, 宽度 − 14px]` 之间移动：
+旋钮是**正圆，直径 = 轨道高度**（`TRACK_HEIGHT = KNOB_SIZE = 26px`），  
+圆心只在 `[13px, 宽度 − 13px]` 之间移动：
 
 ```
-left = calc(14px + pct × (100% − 28px))     ← 旋钮、填充终点、刻度共用这一个几何
+left = calc(13px + pct × (100% − 26px))     ← 旋钮、填充终点、刻度共用这一个几何
 ```
 
 所以 `pct=0` 时圆心落在左端圆角内、`pct=1` 时落在右端圆角内，圆**永远是完整的圆**  
@@ -292,13 +390,25 @@ left = calc(14px + pct × (100% − 28px))     ← 旋钮、填充终点、刻�
 - 拖动写入有**同档位去重 + 在途合并 + 120ms 降频**：1 秒内 60 次拖动最多 3 次写回，  
   落在当前档位时 0 次；松手必定落地。
 - 滑条吞掉自己的 pointer/click/方向键事件，**不会误触官方那一行的 onClick**（那会跳进等级列表）。
-- 组件卸载时清掉降频定时器；桥卸载时把所有加给官方节点的 class 逐个摘掉并移除容器。
-- **点进「推理等级」那一行时，滑条卡片整个撤掉**。官方菜单是同一个 portal 容器在
+- 组件卸载时清掉降频定时器；桥卸载时把所有加给官方节点的 class 逐个摘掉并移除容器，
+  连**加在那一行上的原生 click 监听**也一并摘掉（官方节点上不留任何我们的东西）。
+- **官方「推理等级」那张卡片（Default / Low / High / Xhigh）不会再出现**。那一行的 `onClick`
+  是官方 drill 进等级列表的**唯一入口**，本插件在那一行上用**捕获阶段**的原生 click 监听
+  `stopImmediatePropagation()` 把它拦下：React 17+ 把 `onClick` 委托到 portal 容器的冒泡阶段，
+  所以挂在祖先上会排到 React 之后（等于白挂），必须挂在那一行自己身上。鼠标、Enter/Space
+  （浏览器合成的 click）、以及官方 Tab 处理里的 `focused.click()` 三条路径全覆盖；只拦 click，
+  pointerdown/pointerup/keydown/mousedown 一概不碰 —— 官方根面板的焦点移动、Tab 顺序、Esc 关菜单、
+  portal 定位全部照常。拦下之后**转发**给「模型」那一行，于是**卡片整片区域（大号档位名 + 模型名，
+  含上半张补出来的那 2px）点哪都进模型列表**。那一行自己留着当卡片的大号档位标题（CSS 早已把它
+  做成静态标题：无 hover 底色、雪弗龙隐藏），只是指针改成了 `cursor:pointer` —— 它现在真的可点。
+  滑条因此成了唯一的档位控件。
+- 万一还是进了子面板（比如官方换了实现），滑条卡片整个撤掉。官方菜单是同一个 portal 容器在
   root / model / effort 三个面板间复用（`documentElement.contains(menu)` 在三个面板里**永远为 true**），
   所以「卡片还在不在」必须逐块确认（那两行 + 容器是否还是菜单的子节点），
   不能只看菜单在不在文档里 —— 否则滑条会和官方等级列表叠在一起，而滑条本来就能调等级，那个列表就是多此一举。
-  撤滑条**不等于**撤列表重排：模型列表的卡片式行照样在（`restyleList` 独立于卡片，
-  且必须排在 `detach()` 之后，否则被 `clearListCls()` 冲掉）。
+  撤滑条**不等于**撤列表重排：模型列表的行重排照样在（`restyleList` 独立于卡片，
+  且必须排在 `detach()` 之后，否则被 `clearListCls()` 冲掉）。撤滑条时 click 守卫一起释放，
+  返回根面板后重新挂上。
 
 ## 开发
 
@@ -306,7 +416,7 @@ left = calc(14px + pct × (100% − 28px))     ← 旋钮、填充终点、刻�
 走宿主模块表的平台种子词）。
 
 ```powershell
-npm test          # 离线断言套件（372 项：几何/色彩/星空/卡片重排/重置/失败回滚/无注入回归/子面板切换）
+npm test          # 离线断言套件（471 项：几何/色彩/星空/卡片重排/重置/失败回滚/无注入回归/子面板切换/click 守卫与转发/菜单尺寸与列表/悬停胶囊）
 npm run preview   # 生成 preview/panel.html（免安装就能玩的观感预览）
 npm run screenshots  # 生成 preview/screenshots-src.html（README 那 9 张图的源页）
 ```
