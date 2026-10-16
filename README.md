@@ -60,9 +60,10 @@
 
 ## 安装
 
-> 不想 clone 的话，直接下载打包好的 zip：[**Releases → dsh-reasoning-card-1.2.0.zip**](https://github.com/wuyu1327083461/dsh-reasoning-card/releases/latest)。  
-> 或者用仓库地址安装（见「分享给别人 → 接收方怎么装」）：  
-> `dsh plugin --profile tui add github:wuyu1327083461/dsh-reasoning-card`
+> 不想 clone 的话，三条路都行：  
+> **npm**（最省事）：`dsh plugin --profile <profile> add dsh-reasoning-card`  
+> **zip**：[**Releases → dsh-reasoning-card-1.2.0.zip**](https://github.com/wuyu1327083461/dsh-reasoning-card/releases/latest)  
+> **仓库地址**（见「分享给别人 → 接收方怎么装」）：`dsh plugin --profile <profile> add github:wuyu1327083461/dsh-reasoning-card`
 
 **只走 DSH Desktop 自己的插件面板**——命令行装不了 `desktop` profile：
 
