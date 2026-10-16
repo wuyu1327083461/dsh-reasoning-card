@@ -1,4 +1,4 @@
-# dsh-codex-effort-slider
+# dsh-reasoning-card
 
 给 [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness)（DSH）用的 **Codex 风格推理等级滑条**。
 
@@ -60,12 +60,13 @@
 
 ## 安装
 
-> 不想 clone 的话,直接下载打包好的 zip:[**Releases → dsh-codex-effort-slider-1.0.0.zip**](https://github.com/Microqian2th/dsh-codex-effort-slider/releases/latest)。
+> 推荐直接用仓库地址安装（见「分享给别人 → 接收方怎么装」）：  
+> `dsh plugin --profile tui add github:wuyu1327083461/dsh-reasoning-card`
 
 **只走 DSH Desktop 自己的插件面板**——命令行装不了 `desktop` profile：
 
 ```powershell
-dsh plugin --profile desktop add link:"F:\Work Space\DeepSeek Harness\dsh-codex-effort-slider"
+dsh plugin --profile desktop add link:"<本插件目录的绝对路径>"
 # error: profile "desktop" is managed exclusively by the Electron application
 ```
 
@@ -95,7 +96,7 @@ CSS 与拖动数学都是从真产物抽出来的）。
 npm run pack      # = powershell -NoProfile -ExecutionPolicy Bypass -File pack-dist.ps1
 ```
 
-产出 `dist/dsh-codex-effort-slider-<version>.zip`（约 350 KB）。本插件**零运行时依赖、无构建步骤** ——  
+产出 `dist/dsh-reasoning-card-<version>.zip`（约 350 KB）。本插件**零运行时依赖、无构建步骤** ——  
 解开就能装，接收方不需要 `pnpm install`。若要让人从 GitHub / npm 装，把**本目录的内容**推到仓库根  
 （`package.json` 必须在仓库根，pnpm 才能把它当包解析）。
 
